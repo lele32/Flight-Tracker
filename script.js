@@ -19,6 +19,18 @@ const MOON_DISTANCE_KM = 384400; // Distancia promedio a la luna
 // Variables de control para modos de visualización
 let isHeatmapMode = false;
 let heatmapLayer = null;
+let isNetworkMode = false;
+let networkGraph = null;
+let networkMinFrequency = 1;
+
+const continentColors = {
+    'América del Sur': '#06b6d4',
+    'América del Norte': '#3b82f6',
+    'Europa': '#8b5cf6',
+    'Asia': '#f59e0b',
+    'Oceanía': '#22c55e',
+    'Desconocido': '#6b7280'
+};
 
 // Base de datos de vuelos simulados
 const flightDatabase = {
@@ -188,6 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupDatabaseManager();
     setupAnimationControls();
     setupHeatmapControls();
+    setupNetworkControls();
     loadFlights();
     setupForm();
 });
@@ -241,6 +254,9 @@ function setupAnimationControls() {
         if (isAnimationMode) {
             stopAnimationMode(false);
         } else {
+            if (isNetworkMode) {
+                disableNetworkMode(false);
+            }
             startAnimationMode();
         }
     });
@@ -256,8 +272,51 @@ function setupHeatmapControls() {
         if (isHeatmapMode) {
             removeHeatmap();
         } else {
+            if (isNetworkMode) {
+                disableNetworkMode(false);
+            }
             renderHeatmap();
         }
+    });
+}
+
+function setupNetworkControls() {
+    const networkBtn = document.getElementById('toggle-network');
+    const frequencyInput = document.getElementById('network-min-frequency');
+    const frequencyValue = document.getElementById('network-min-frequency-value');
+    if (!networkBtn) return;
+
+    setNetworkStatus('Network apagado', 'idle');
+
+    if (frequencyInput && frequencyValue) {
+        frequencyInput.value = String(networkMinFrequency);
+        frequencyValue.textContent = `${networkMinFrequency}+`;
+
+        frequencyInput.addEventListener('input', () => {
+            networkMinFrequency = Number(frequencyInput.value) || 1;
+            frequencyValue.textContent = `${networkMinFrequency}+`;
+
+            if (isNetworkMode) {
+                renderNetworkGraph(lastFilteredFlights);
+            }
+        });
+    }
+
+    networkBtn.addEventListener('click', () => {
+        if (isNetworkMode) {
+            disableNetworkMode(true);
+            return;
+        }
+
+        if (isAnimationMode) {
+            stopAnimationMode(false);
+        }
+
+        if (isHeatmapMode) {
+            removeHeatmap();
+        }
+
+        enableNetworkMode();
     });
 }
 
@@ -268,6 +327,310 @@ function setHeatmapStatus(message, tone = 'idle') {
     statusEl.textContent = message;
     statusEl.classList.remove('status-idle', 'status-loading', 'status-ok', 'status-error');
     statusEl.classList.add(`status-${tone}`);
+}
+
+function setNetworkStatus(message, tone = 'idle') {
+    const statusEl = document.getElementById('network-status');
+    if (!statusEl) return;
+
+    statusEl.textContent = message;
+    statusEl.classList.remove('status-idle', 'status-loading', 'status-ok', 'status-error');
+    statusEl.classList.add(`status-${tone}`);
+}
+
+function enableNetworkMode() {
+    const networkBtn = document.getElementById('toggle-network');
+    const mapEl = document.getElementById('map');
+    const cyEl = document.getElementById('cytoscape-container');
+    const panelEl = document.getElementById('network-hubs-panel');
+    const frequencyControl = document.getElementById('network-frequency-control');
+
+    if (!window.cytoscape) {
+        setNetworkStatus('Cytoscape no cargado', 'error');
+        return;
+    }
+
+    if (!mapEl || !cyEl) {
+        setNetworkStatus('Contenedor no disponible', 'error');
+        return;
+    }
+
+    isNetworkMode = true;
+    networkBtn?.classList.add('active');
+    mapEl.classList.add('network-background');
+    cyEl.classList.add('active');
+    panelEl?.classList.add('active');
+    frequencyControl?.classList.add('active');
+    setNetworkStatus('Construyendo red...', 'loading');
+
+    renderNetworkGraph(lastFilteredFlights);
+}
+
+function disableNetworkMode(restoreMap = true) {
+    const networkBtn = document.getElementById('toggle-network');
+    const mapEl = document.getElementById('map');
+    const cyEl = document.getElementById('cytoscape-container');
+    const panelEl = document.getElementById('network-hubs-panel');
+    const frequencyControl = document.getElementById('network-frequency-control');
+
+    isNetworkMode = false;
+    networkBtn?.classList.remove('active');
+    mapEl?.classList.remove('network-background');
+    cyEl?.classList.remove('active');
+    panelEl?.classList.remove('active');
+    frequencyControl?.classList.remove('active');
+
+    if (networkGraph) {
+        networkGraph.destroy();
+        networkGraph = null;
+    }
+
+    const hubsList = document.getElementById('network-hubs-list');
+    if (hubsList) hubsList.innerHTML = '';
+
+    setNetworkStatus('Network apagado', 'idle');
+
+    if (restoreMap && lastFilteredFlights.length && !isAnimationMode) {
+        renderMap(lastFilteredFlights);
+    }
+}
+
+function sanitizeNodeId(value) {
+    return String(value || 'unknown')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9_-]/g, '_')
+        .toLowerCase();
+}
+
+function renderNetworkGraph(flights) {
+    if (!isNetworkMode) return;
+
+    const cyEl = document.getElementById('cytoscape-container');
+    if (!cyEl) {
+        setNetworkStatus('Contenedor no disponible', 'error');
+        return;
+    }
+
+    if (networkGraph) {
+        networkGraph.destroy();
+        networkGraph = null;
+    }
+
+    const validFlights = (flights || []).filter(f => f.origin && f.destination);
+    if (!validFlights.length) {
+        setNetworkStatus('Sin vuelos para filtros actuales', 'error');
+        renderNetworkHubsPanel([]);
+        return;
+    }
+
+    const airportCountryMap = new Map();
+    const nodeStats = new Map();
+    const edgeStats = new Map();
+
+    validFlights.forEach((flight) => {
+        const origin = flight.origin || 'Buenos Aires';
+        const destination = flight.destination;
+        const routeKey = `${origin}__${destination}`;
+
+        const originCountry = cityToCountryMap[origin] || 'Desconocido';
+        const destinationCountry = flight.country || cityToCountryMap[destination] || 'Desconocido';
+        if (!airportCountryMap.has(origin)) {
+            airportCountryMap.set(origin, originCountry);
+        }
+        if (!airportCountryMap.has(destination)) {
+            airportCountryMap.set(destination, destinationCountry);
+        }
+
+        nodeStats.set(origin, (nodeStats.get(origin) || 0) + 1);
+        nodeStats.set(destination, (nodeStats.get(destination) || 0) + 1);
+
+        if (!edgeStats.has(routeKey)) {
+            edgeStats.set(routeKey, {
+                source: origin,
+                target: destination,
+                count: 0,
+                airlines: new Set()
+            });
+        }
+
+        const edge = edgeStats.get(routeKey);
+        edge.count += 1;
+        const airlineCode = (flight.flightNumber || '').substring(0, 2).toUpperCase();
+        if (airlineCode) edge.airlines.add(airlineCode);
+    });
+
+    const maxObservedFrequency = Math.max(...Array.from(edgeStats.values()).map(e => e.count), 1);
+    const frequencyInput = document.getElementById('network-min-frequency');
+    const frequencyValue = document.getElementById('network-min-frequency-value');
+    if (frequencyInput) {
+        frequencyInput.max = String(maxObservedFrequency);
+        if (networkMinFrequency > maxObservedFrequency) {
+            networkMinFrequency = maxObservedFrequency;
+            frequencyInput.value = String(networkMinFrequency);
+        }
+    }
+    if (frequencyValue) {
+        frequencyValue.textContent = `${networkMinFrequency}+`;
+    }
+
+    const filteredEdgeEntries = Array.from(edgeStats.values()).filter(edge => edge.count >= networkMinFrequency);
+
+    if (!filteredEdgeEntries.length) {
+        setNetworkStatus(`Sin rutas con frecuencia >= ${networkMinFrequency}`, 'error');
+        renderNetworkHubsPanel([]);
+        return;
+    }
+
+    const nodeIdsInUse = new Set();
+    filteredEdgeEntries.forEach(edge => {
+        nodeIdsInUse.add(edge.source);
+        nodeIdsInUse.add(edge.target);
+    });
+
+    const filteredNodeStats = new Map();
+    nodeIdsInUse.forEach(airport => {
+        filteredNodeStats.set(airport, nodeStats.get(airport) || 0);
+    });
+
+    const nodeCounts = Array.from(filteredNodeStats.values());
+    const maxNodeCount = Math.max(...nodeCounts, 1);
+    const edgeCounts = filteredEdgeEntries.map(e => e.count);
+    const maxEdgeCount = Math.max(...edgeCounts, 1);
+
+    const nodes = Array.from(filteredNodeStats.entries()).map(([airport, count]) => {
+        const nodeId = `airport_${sanitizeNodeId(airport)}`;
+        const size = 24 + (count / maxNodeCount) * 34;
+        const airportCountry = airportCountryMap.get(airport) || 'Desconocido';
+        const continent = getContinentFromCountry(airportCountry) || 'Desconocido';
+        const color = continentColors[continent] || continentColors.Desconocido;
+        return {
+            data: {
+                id: nodeId,
+                label: airport,
+                flights: count,
+                size,
+                continent,
+                country: airportCountry,
+                color
+            }
+        };
+    });
+
+    const edges = filteredEdgeEntries.map((edge) => {
+        const edgeId = `route_${sanitizeNodeId(edge.source)}_${sanitizeNodeId(edge.target)}`;
+        const width = 1.5 + (edge.count / maxEdgeCount) * 7;
+        return {
+            data: {
+                id: edgeId,
+                source: `airport_${sanitizeNodeId(edge.source)}`,
+                target: `airport_${sanitizeNodeId(edge.target)}`,
+                count: edge.count,
+                airlines: Array.from(edge.airlines).join(', ') || 'N/A',
+                width,
+                label: `${edge.count}`
+            }
+        };
+    });
+
+    networkGraph = window.cytoscape({
+        container: cyEl,
+        elements: [...nodes, ...edges],
+        style: [
+            {
+                selector: 'node',
+                style: {
+                    label: 'data(label)',
+                    width: 'data(size)',
+                    height: 'data(size)',
+                    'background-color': 'data(color)',
+                    color: '#f3f3f3',
+                    'font-size': 10,
+                    'text-wrap': 'wrap',
+                    'text-max-width': 72,
+                    'text-valign': 'center',
+                    'text-halign': 'center',
+                    'border-width': 1.5,
+                    'border-color': '#f5f5f5'
+                }
+            },
+            {
+                selector: 'edge',
+                style: {
+                    width: 'data(width)',
+                    'line-color': '#5f6b7a',
+                    'target-arrow-color': '#5f6b7a',
+                    'target-arrow-shape': 'triangle',
+                    'curve-style': 'bezier',
+                    opacity: 0.85,
+                    label: 'data(label)',
+                    'font-size': 9,
+                    color: '#d4d4d4',
+                    'text-background-color': 'rgba(10, 10, 10, 0.75)',
+                    'text-background-opacity': 1,
+                    'text-background-padding': 2
+                }
+            },
+            {
+                selector: ':selected',
+                style: {
+                    'overlay-opacity': 0,
+                    'border-color': '#ffffff',
+                    'line-color': '#ffffff',
+                    'target-arrow-color': '#ffffff'
+                }
+            }
+        ],
+        layout: {
+            name: 'cose',
+            animate: true,
+            animationDuration: 900,
+            fit: true,
+            padding: 36,
+            randomize: true,
+            idealEdgeLength: 140,
+            nodeRepulsion: 700000,
+            edgeElasticity: 120,
+            gravity: 0.65,
+            numIter: 1200
+        }
+    });
+
+    networkGraph.on('tap', 'node', (evt) => {
+        const node = evt.target.data();
+        setNetworkStatus(`Hub: ${node.label} • ${node.flights} vuelos • ${node.continent}`, 'ok');
+    });
+
+    networkGraph.on('tap', 'edge', (evt) => {
+        const edge = evt.target.data();
+        setNetworkStatus(`Ruta: ${edge.count} vuelos • Aerolíneas ${edge.airlines}`, 'ok');
+    });
+
+    renderNetworkHubsPanel(Array.from(filteredNodeStats.entries()));
+    setNetworkStatus(`Network activo • ${nodes.length} nodos • ${edges.length} rutas (>= ${networkMinFrequency})`, 'ok');
+}
+
+function renderNetworkHubsPanel(hubEntries) {
+    const hubsList = document.getElementById('network-hubs-list');
+    if (!hubsList) return;
+
+    hubsList.innerHTML = '';
+
+    if (!hubEntries || !hubEntries.length) {
+        const empty = document.createElement('li');
+        empty.textContent = 'Sin hubs para el filtro actual';
+        hubsList.appendChild(empty);
+        return;
+    }
+
+    hubEntries
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .slice(0, 5)
+        .forEach(([airport, flights]) => {
+            const item = document.createElement('li');
+            item.textContent = `${airport} - ${flights} vuelos`;
+            hubsList.appendChild(item);
+        });
 }
 
 function renderHeatmap() {
@@ -414,7 +777,7 @@ function removeHeatmap() {
     setHeatmapStatus('Heatmap apagado', 'idle');
     
     // Re-renderizar el mapa normal
-    if (lastFilteredFlights.length) {
+    if (lastFilteredFlights.length && !isNetworkMode) {
         renderMap(lastFilteredFlights);
     }
 }
@@ -568,7 +931,7 @@ function stopAnimationMode(completed) {
     if (toggleBtn) toggleBtn.textContent = 'Modo Animado';
     if (status) status.textContent = completed ? 'Timeline finalizado' : 'Modo normal';
 
-    if (lastFilteredFlights.length) {
+    if (lastFilteredFlights.length && !isNetworkMode) {
         renderMap(lastFilteredFlights);
     }
 }
@@ -1354,8 +1717,10 @@ function processFlights(flights) {
         airlineList.appendChild(li);
     });
 
-    // Mapa interactivo
-    if (!isAnimationMode) {
+    // Mapa o red interactiva
+    if (isNetworkMode) {
+        renderNetworkGraph(filteredFlights);
+    } else if (!isAnimationMode) {
         renderMap(filteredFlights);
     }
 }

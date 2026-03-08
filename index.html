@@ -113,11 +113,25 @@
             <div id="map-actions">
                 <button id="toggle-animated-mode" type="button">Modo Animado</button>
                 <button id="toggle-heatmap" type="button">Heatmap</button>
+                <button id="toggle-network" type="button">Network</button>
+                <label id="network-frequency-control" for="network-min-frequency">
+                    Min Ruta
+                    <input id="network-min-frequency" type="range" min="1" max="8" step="1" value="1">
+                    <span id="network-min-frequency-value">1+</span>
+                </label>
                 <span id="timeline-status">Modo normal</span>
                 <span id="heatmap-status" class="status-idle">Heatmap apagado</span>
+                <span id="network-status" class="status-idle">Network apagado</span>
             </div>
         </div>
-        <div id="map"></div>
+        <div id="map-viewport">
+            <div id="map"></div>
+            <div id="cytoscape-container"></div>
+            <aside id="network-hubs-panel" aria-live="polite">
+                <h3>Top 5 Hubs</h3>
+                <ol id="network-hubs-list"></ol>
+            </aside>
+        </div>
     </div>
 
     <div id="flight-modal" class="modal-hidden" aria-hidden="true">
@@ -254,6 +268,7 @@
         window.db = db;
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js"></script>
     <script type="module" src="script.js"></script>
 </body>
 </html>
