@@ -8,59 +8,79 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>Dashboard de Vuelos</h1>
+    <h1>Flight Tracker</h1>
+    <p id="hero-subtitle">Mapa global en tiempo real con foco en rutas, frecuencia y motivo de viaje.</p>
+
+    <div id="period-selector">
+        <span>Período:</span>
+        <label><input type="radio" name="period" value="total" checked> Total</label>
+        <label><input type="radio" name="period" value="1month"> Último Mes</label>
+        <label><input type="radio" name="period" value="3months"> Últimos 3 Meses</label>
+        <label><input type="radio" name="period" value="1year"> Último Año</label>
+        <label for="trip-type-filter" class="inline-select-label">Tipo:</label>
+        <select id="trip-type-filter" class="inline-select">
+            <option value="all" selected>Todos</option>
+            <option value="Personal">Personal</option>
+            <option value="Trabajo">Trabajo</option>
+        </select>
+        <button id="open-register-modal" type="button">Registrar Vuelo</button>
+    </div>
+
     <div id="dashboard">
         <div class="stat">
-            <h2>Kilómetros Acumulados</h2>
+            <h2>Km Totales</h2>
             <p id="total-km">0 km</p>
         </div>
         <div class="stat">
-            <h2>Destinos Más Frecuentes</h2>
+            <h2>Top Destinos</h2>
             <ul id="frequent-destinations"></ul>
         </div>
         <div class="stat">
-            <h2>Países Visitados</h2>
+            <h2>Países</h2>
             <ul id="visited-countries"></ul>
         </div>
     </div>
 
-    <!-- Mapa Full Width -->
     <div id="map-container">
-        <h2>Mapa Interactivo de Vuelos</h2>
+        <h2>Live Routes Map</h2>
         <div id="map"></div>
     </div>
 
-    <!-- Agregar Vuelo -->
-    <div id="add-flight">
-        <h2>Agregar Vuelo</h2>
-        <form id="flight-form">
-            <label for="origin">Origen:</label>
-            <input type="text" id="origin" required><br>
-            <label for="destination">Destino:</label>
-            <input type="text" id="destination" required><br>
-            <label for="distance">Distancia (km):</label>
-            <input type="number" id="distance" required><br>
-            <label for="date">Fecha:</label>
-            <input type="date" id="date" required><br>
-            <label for="country">País:</label>
-            <input type="text" id="country" required><br>
-            <button type="submit">Agregar Vuelo</button>
-        </form>
-        <button id="load-sample">Cargar Datos de Ejemplo</button>
+    <div id="flight-modal" class="modal-hidden" aria-hidden="true">
+        <div id="modal-overlay"></div>
+        <div id="add-flight" role="dialog" aria-modal="true" aria-labelledby="register-title">
+            <button id="close-register-modal" type="button" aria-label="Cerrar">x</button>
+            <h2 id="register-title">Registrar Vuelo</h2>
+            <form id="flight-form">
+                <label for="flight-number">Número de Vuelo (ej: AM190):</label>
+                <input type="text" id="flight-number" placeholder="AM190" maxlength="6" required><br>
+                <label for="category">Categoría del viaje:</label>
+                <select id="category" required>
+                    <option value="Personal" selected>Personal</option>
+                    <option value="Trabajo">Trabajo</option>
+                </select><br>
+                <label for="date">Fecha:</label>
+                <input type="date" id="date" required><br>
+                <div id="flight-info" style="display: none;">
+                    <div class="info-box">
+                        <p><strong>Origen:</strong> <span id="info-origin"></span></p>
+                        <p><strong>Destino:</strong> <span id="info-destination"></span></p>
+                        <p><strong>Distancia:</strong> <span id="info-distance"></span></p>
+                        <p><strong>País:</strong> <span id="info-country"></span></p>
+                    </div>
+                </div>
+                <div id="flight-error" style="display: none; color: #ff6b6b; margin: 1rem 0;"></div>
+                <button type="submit" id="submit-btn" disabled>Registrar Vuelo</button>
+            </form>
+            <button id="load-sample">Cargar Datos de Ejemplo</button>
+        </div>
     </div>
 
-    <!-- Firebase SDK -->
     <script type="module">
-        // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
         import { getFirestore } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
-        import { addDoc, collection } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
-        // TODO: Add SDKs for Firebase products that you want to use
-        // https://firebase.google.com/docs/web/setup#available-libraries
 
-        // Your web app's Firebase configuration
-        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
         const firebaseConfig = {
             apiKey: "AIzaSyB1EeHfOKQ8QSUXAC2b6N7rJcoJaQVFfTA",
             authDomain: "flightracker-f5493.firebaseapp.com",
@@ -71,15 +91,12 @@
             measurementId: "G-QZ5VTMWJCY"
         };
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
+        getAnalytics(app);
         const db = getFirestore(app);
-
         window.db = db;
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <script type="module" src="script.js"></script>
 </body>
-</html></content>
-<parameter name="filePath">index.html
+</html>
