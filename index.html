@@ -24,12 +24,14 @@
             <option value="Trabajo">Trabajo</option>
         </select>
         <button id="open-register-modal" type="button">Registrar Vuelo</button>
+        <button id="open-db-manager" type="button">Gestionar Base</button>
     </div>
 
     <div id="dashboard">
         <div class="stat">
             <h2>Km Totales</h2>
             <p id="total-km">0 km</p>
+            <p id="total-time">0 h 0 min</p>
         </div>
         <div class="stat">
             <h2>Top Destinos</h2>
@@ -38,6 +40,10 @@
         <div class="stat">
             <h2>Países</h2>
             <ul id="visited-countries"></ul>
+        </div>
+        <div class="stat">
+            <h2>Top Aerolíneas</h2>
+            <ul id="top-airlines"></ul>
         </div>
     </div>
 
@@ -61,11 +67,25 @@
                 </select><br>
                 <label for="date">Fecha:</label>
                 <input type="date" id="date" required><br>
+                <label>Clasificación (1 a 5):</label>
+                <div id="rating-stars" class="rating-stars" aria-label="Clasificación en estrellas">
+                    <input type="radio" id="star5" name="rating" value="5" checked>
+                    <label for="star5" title="5 estrellas">★</label>
+                    <input type="radio" id="star4" name="rating" value="4">
+                    <label for="star4" title="4 estrellas">★</label>
+                    <input type="radio" id="star3" name="rating" value="3">
+                    <label for="star3" title="3 estrellas">★</label>
+                    <input type="radio" id="star2" name="rating" value="2">
+                    <label for="star2" title="2 estrellas">★</label>
+                    <input type="radio" id="star1" name="rating" value="1">
+                    <label for="star1" title="1 estrella">★</label>
+                </div>
                 <div id="flight-info" style="display: none;">
                     <div class="info-box">
                         <p><strong>Origen:</strong> <span id="info-origin"></span></p>
                         <p><strong>Destino:</strong> <span id="info-destination"></span></p>
                         <p><strong>Distancia:</strong> <span id="info-distance"></span></p>
+                        <p><strong>Duración estimada:</strong> <span id="info-duration"></span></p>
                         <p><strong>País:</strong> <span id="info-country"></span></p>
                     </div>
                 </div>
@@ -73,6 +93,67 @@
                 <button type="submit" id="submit-btn" disabled>Registrar Vuelo</button>
             </form>
             <button id="load-sample">Cargar Datos de Ejemplo</button>
+        </div>
+    </div>
+
+    <div id="db-modal" class="modal-hidden" aria-hidden="true">
+        <div id="db-modal-overlay"></div>
+        <div id="db-manager" role="dialog" aria-modal="true" aria-labelledby="db-title">
+            <button id="close-db-manager" type="button" aria-label="Cerrar">x</button>
+            <h2 id="db-title">Gestor de Base de Datos</h2>
+            <p class="db-subtitle">Edita, elimina y agrega vuelos manualmente.</p>
+
+            <form id="db-add-form">
+                <label for="db-flight-number">Número de Vuelo</label>
+                <input id="db-flight-number" type="text" placeholder="AA100" maxlength="6" required>
+
+                <label for="db-date">Fecha</label>
+                <input id="db-date" type="date" required>
+
+                <label for="db-distance">Distancia (km)</label>
+                <input id="db-distance" type="number" min="100" step="10" placeholder="8500" required>
+
+                <label for="db-destination">Destino</label>
+                <input id="db-destination" type="text" placeholder="Nueva York" required>
+
+                <label for="db-country">País</label>
+                <input id="db-country" type="text" placeholder="Estados Unidos" required>
+
+                <label for="db-category">Categoría</label>
+                <select id="db-category" required>
+                    <option value="Personal">Personal</option>
+                    <option value="Trabajo">Trabajo</option>
+                </select>
+
+                <label for="db-rating">Rating</label>
+                <select id="db-rating" required>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5" selected>5</option>
+                </select>
+
+                <button type="submit" id="db-add-submit">Agregar Manualmente</button>
+            </form>
+
+            <div id="db-table-wrapper">
+                <table id="db-table">
+                    <thead>
+                        <tr>
+                            <th>Vuelo</th>
+                            <th>Fecha</th>
+                            <th>Destino</th>
+                            <th>País</th>
+                            <th>Km</th>
+                            <th>Categoría</th>
+                            <th>Rating</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="db-table-body"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 

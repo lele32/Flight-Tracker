@@ -133,6 +133,23 @@ h1 {
     filter: brightness(0.94);
 }
 
+#open-db-manager {
+    border: 1px solid #2f2f2f;
+    border-radius: 999px;
+    background: transparent;
+    color: #dfdfdf;
+    padding: 0.38rem 0.9rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 160ms ease;
+}
+
+#open-db-manager:hover {
+    background: #111111;
+    border-color: #444444;
+}
+
 #map-container {
     max-width: 1320px;
     margin: 0 auto 1rem auto;
@@ -160,6 +177,7 @@ h1 {
 .leaflet-container {
     font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
     filter: contrast(1.08) saturate(0.95);
+    background: #050505;
 }
 
 .leaflet-control-zoom a {
@@ -177,7 +195,7 @@ h1 {
     max-width: 1320px;
     margin: 0 auto;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.7rem;
 }
 
@@ -204,14 +222,47 @@ h1 {
     line-height: 1.32;
 }
 
+#total-time {
+    margin-top: 0.28rem;
+    color: #a9a9a9;
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
 .stat ul {
     padding-left: 0;
     list-style: none;
 }
 
+#frequent-destinations,
+#visited-countries,
+#top-airlines {
+    max-height: 7.2em;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+#frequent-destinations::-webkit-scrollbar,
+#visited-countries::-webkit-scrollbar,
+#top-airlines::-webkit-scrollbar {
+    width: 6px;
+}
+
+#frequent-destinations::-webkit-scrollbar-thumb,
+#visited-countries::-webkit-scrollbar-thumb,
+#top-airlines::-webkit-scrollbar-thumb {
+    background: #3a3a3a;
+    border-radius: 999px;
+}
+
 .stat li {
     margin-bottom: 0.18rem;
     color: #d7d7d7;
+}
+
+#top-airlines li {
+    margin-bottom: 0.35rem;
 }
 
 #add-flight {
@@ -239,6 +290,172 @@ h1 {
     justify-content: center;
     padding: 1rem;
     z-index: 999;
+}
+
+#db-modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    z-index: 1000;
+}
+
+#db-modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+}
+
+#db-manager {
+    width: min(1200px, 96vw);
+    max-height: 88vh;
+    overflow: auto;
+    border-radius: 14px;
+    border: 1px solid #2b2b2b;
+    background: #0c0c0c;
+    padding: 1rem;
+    position: relative;
+    z-index: 2;
+}
+
+#close-db-manager {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    border: 1px solid #2f2f2f;
+    background: #151515;
+    color: #d9d9d9;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+#close-db-manager:hover {
+    background: #1f1f1f;
+}
+
+#db-title {
+    margin: 0;
+    font-size: 0.98rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #cfcfcf;
+}
+
+.db-subtitle {
+    margin: 0.35rem 0 0.8rem 0;
+    color: #8e8e8e;
+    font-size: 0.82rem;
+}
+
+#db-add-form {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.55rem;
+    margin-bottom: 0.9rem;
+}
+
+#db-add-form label {
+    color: #9f9f9f;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+#db-add-form input,
+#db-add-form select {
+    width: 100%;
+    border: 1px solid #2e2e2e;
+    background: #111111;
+    color: #ececec;
+    border-radius: 8px;
+    padding: 0.5rem 0.55rem;
+    font-size: 0.84rem;
+}
+
+#db-add-submit {
+    grid-column: span 4;
+    border: 1px solid #2e2e2e;
+    background: #ffffff;
+    color: #111111;
+    border-radius: 9px;
+    padding: 0.55rem 0.7rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+#db-table-wrapper {
+    border: 1px solid #252525;
+    border-radius: 10px;
+    overflow: auto;
+    max-height: 46vh;
+}
+
+#db-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 900px;
+}
+
+#db-table th,
+#db-table td {
+    border-bottom: 1px solid #222222;
+    padding: 0.46rem;
+    text-align: left;
+    font-size: 0.8rem;
+    color: #d9d9d9;
+    vertical-align: middle;
+}
+
+#db-table th {
+    position: sticky;
+    top: 0;
+    background: #0e0e0e;
+    color: #9f9f9f;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.db-input,
+.db-select {
+    width: 100%;
+    border: 1px solid #313131;
+    background: #131313;
+    color: #efefef;
+    border-radius: 6px;
+    padding: 0.34rem 0.4rem;
+    font-size: 0.79rem;
+}
+
+.db-actions {
+    display: inline-flex;
+    gap: 0.35rem;
+}
+
+.db-btn {
+    border: 1px solid #303030;
+    background: #161616;
+    color: #e5e5e5;
+    border-radius: 7px;
+    padding: 0.27rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.db-btn.save {
+    background: #f6f6f6;
+    color: #101010;
+}
+
+.db-btn.delete {
+    background: #2a1010;
+    border-color: #482020;
+    color: #ffb3b3;
 }
 
 #modal-overlay {
@@ -302,6 +519,35 @@ form select {
     background: #0b0b0b;
     color: #f4f4f4;
     font-size: 0.9rem;
+}
+
+.rating-stars {
+    grid-column: span 2;
+    display: inline-flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    gap: 0.18rem;
+}
+
+.rating-stars input {
+    display: none;
+}
+
+.rating-stars label {
+    grid-column: auto;
+    color: #505050;
+    font-size: 1.4rem;
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: 0;
+    padding: 0;
+    line-height: 1;
+}
+
+.rating-stars label:hover,
+.rating-stars label:hover ~ label,
+.rating-stars input:checked ~ label {
+    color: #ffd34d;
 }
 
 form input::placeholder {
@@ -412,6 +658,9 @@ form button:disabled {
     border: 2px solid rgba(0, 0, 0, 0.8);
     box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2), 0 8px 14px rgba(0, 0, 0, 0.38);
     transition: transform 150ms ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .custom-marker:hover .marker-inner,
@@ -426,6 +675,9 @@ form button:disabled {
     border: 2px solid rgba(0, 0, 0, 0.85);
     box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.28), 0 6px 12px rgba(0, 0, 0, 0.4);
     position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .origin-marker-inner::before {
@@ -438,6 +690,18 @@ form button:disabled {
     transform: translate(-50%, -50%);
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.95);
+}
+
+.marker-logo-badge {
+    position: relative;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
 }
 
 .flight-route {
@@ -475,7 +739,8 @@ form button:disabled {
     }
 
     .inline-select,
-    #open-register-modal {
+    #open-register-modal,
+    #open-db-manager {
         width: 100%;
         border-radius: 10px;
     }
@@ -491,5 +756,13 @@ form button:disabled {
     #add-flight {
         padding: 0.9rem;
         width: 100%;
+    }
+
+    #db-add-form {
+        grid-template-columns: 1fr;
+    }
+
+    #db-add-submit {
+        grid-column: span 1;
     }
 }
