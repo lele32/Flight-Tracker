@@ -1239,6 +1239,7 @@ function processFlights(flights) {
     document.getElementById('total-time').textContent = formatDuration(totalDurationHours);
     document.getElementById('world-tours').textContent = worldTours;
     document.getElementById('moon-distance').textContent = moonDistances;
+    document.getElementById('flight-count').textContent = flightsWithDistance.length;
     document.getElementById('avg-distance').textContent = `${averageDistance.toLocaleString()} km`;
     document.getElementById('longest-flight').textContent = longestFlight.distance
         ? `${longestFlight.flightNumber || 'N/A'} • ${longestFlight.destination || 'N/A'} • ${Number(longestFlight.distance).toLocaleString()} km`

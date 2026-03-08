@@ -27,21 +27,40 @@
         <button id="open-db-manager" type="button">Gestionar Base</button>
     </div>
 
-    <div id="dashboard">
-        <div class="stat">
+    <div id="km-totales-card" class="stat stat-km-totales">
+        <div class="km-section">
             <h2>Km Totales</h2>
             <p id="total-km">0 km</p>
+        </div>
+        <div class="km-section">
+            <h2>Tiempo</h2>
             <p id="total-time">0 h 0 min</p>
-            <div id="km-equivalents" style="font-size: 0.85rem; color: #a3a3a3; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
-                <p style="margin: 4px 0;">🌍 <span id="world-tours">0</span> vueltas al mundo</p>
-                <p style="margin: 4px 0;">🌙 <span id="moon-distance">0</span> distancia a la luna</p>
+        </div>
+        <div class="km-section km-equivalents-section">
+            <h2>Equivalentes</h2>
+            <div id="km-equivalents">
+                <div class="equiv-item">
+                    <p>🌍 <span id="world-tours">0</span></p>
+                    <p class="equiv-label">vueltas al mundo</p>
+                </div>
+                <div class="equiv-item">
+                    <p>🌙 <span id="moon-distance">0</span></p>
+                    <p class="equiv-label">distancia a la luna</p>
+                </div>
             </div>
+        </div>
+        <div class="km-section">
+            <h2>Estadísticas</h2>
             <ul id="flight-distance-stats">
-                <li>📏 Promedio: <span id="avg-distance">0 km</span></li>
-                <li>🚀 Más largo: <span id="longest-flight">-</span></li>
-                <li>🛬 Más corto: <span id="shortest-flight">-</span></li>
+                <li>✈️ Vuelos: <span id="flight-count">0</span></li>
+                <li>📏 Prom: <span id="avg-distance">0 km</span></li>
+                <li>🚀 Máx: <span id="longest-flight">-</span></li>
+                <li>🛬 Mín: <span id="shortest-flight">-</span></li>
             </ul>
         </div>
+    </div>
+
+    <div id="dashboard">
         <div class="stat">
             <h2>Top Destinos</h2>
             <ul id="frequent-destinations"></ul>
@@ -56,30 +75,35 @@
         </div>
         <div class="stat">
             <h2>Cobertura</h2>
-            <ul id="coverage-metrics">
-                <li class="coverage-item">
-                    <span class="coverage-icon">🗺️</span>
-                    <div class="coverage-copy">
-                        <span id="coverage-country-count" class="coverage-value">0</span>
+            <div id="coverage-metrics">
+                <div class="coverage-item">
+                    <div class="coverage-number">
+                        <span id="coverage-country-count">0</span>
+                    </div>
+                    <div class="coverage-info">
+                        <span class="coverage-icon">🗺️</span>
                         <span class="coverage-label">Países</span>
                     </div>
-                </li>
-                <li class="coverage-item">
-                    <span class="coverage-icon">🏙️</span>
-                    <div class="coverage-copy">
-                        <span id="coverage-city-count" class="coverage-value">0</span>
+                </div>
+                <div class="coverage-item">
+                    <div class="coverage-number">
+                        <span id="coverage-city-count">0</span>
+                    </div>
+                    <div class="coverage-info">
+                        <span class="coverage-icon">🏙️</span>
                         <span class="coverage-label">Ciudades</span>
                     </div>
-                </li>
-                <li class="coverage-item">
-                    <span class="coverage-icon">🌐</span>
-                    <div class="coverage-copy">
-                        <span id="coverage-continent-count" class="coverage-value">0</span>
-                        <span class="coverage-label">Continentes</span>
-                        <span id="coverage-continents-detail" class="coverage-tooltip" title="Sin continentes detectados">Sin continentes detectados</span>
+                </div>
+                <div class="coverage-item">
+                    <div class="coverage-number">
+                        <span id="coverage-continent-count">0</span>
                     </div>
-                </li>
-            </ul>
+                    <div class="coverage-info">
+                        <span class="coverage-icon">🌐</span>
+                        <span class="coverage-label">Continentes</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
