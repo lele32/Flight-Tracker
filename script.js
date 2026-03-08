@@ -1226,7 +1226,7 @@ function processFlights(flights) {
         .sort((a, b) => b[1].count - a[1].count);
     const destList = document.getElementById('frequent-destinations');
     destList.innerHTML = '';
-    sortedDestinations.forEach(([dest, data]) => {
+    sortedDestinations.slice(0, 5).forEach(([dest, data]) => {
         const li = document.createElement('li');
         li.textContent = `${getCountryFlag(data.country)} ${dest}: ${data.count}`;
         destList.appendChild(li);
@@ -1253,7 +1253,7 @@ function processFlights(flights) {
     });
     const countryList = document.getElementById('visited-countries');
     countryList.innerHTML = '';
-    Array.from(countries).sort().forEach(country => {
+    Array.from(countries).sort().slice(0, 5).forEach(country => {
         const li = document.createElement('li');
         li.textContent = `${getCountryFlag(country)} ${country}`;
         countryList.appendChild(li);
@@ -1263,9 +1263,18 @@ function processFlights(flights) {
     const coverageCountryCount = document.getElementById('coverage-country-count');
     const coverageCityCount = document.getElementById('coverage-city-count');
     const coverageContinentCount = document.getElementById('coverage-continent-count');
+    const coverageContinentsDetail = document.getElementById('coverage-continents-detail');
+    const sortedContinents = Array.from(continents).sort();
+    const continentsText = sortedContinents.length
+        ? sortedContinents.join(', ')
+        : 'Sin continentes detectados';
     if (coverageCountryCount) coverageCountryCount.textContent = String(countries.size);
     if (coverageCityCount) coverageCityCount.textContent = String(cities.size);
     if (coverageContinentCount) coverageContinentCount.textContent = String(continents.size);
+    if (coverageContinentsDetail) {
+        coverageContinentsDetail.textContent = continentsText;
+        coverageContinentsDetail.title = continentsText;
+    }
 
     // Top aerolineas por rating promedio
     const airlineAgg = {};
@@ -1296,7 +1305,7 @@ function processFlights(flights) {
     const airlineList = document.getElementById('top-airlines');
     airlineList.innerHTML = '';
 
-    rankedAirlines.forEach(airline => {
+    rankedAirlines.slice(0, 5).forEach(airline => {
         const li = document.createElement('li');
         li.innerHTML = `
             <span style="display:flex;align-items:center;gap:8px;justify-content:space-between;">

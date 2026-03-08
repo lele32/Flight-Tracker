@@ -57,9 +57,28 @@
         <div class="stat">
             <h2>Cobertura</h2>
             <ul id="coverage-metrics">
-                <li>🗺️ Países: <span id="coverage-country-count">0</span></li>
-                <li>🏙️ Ciudades: <span id="coverage-city-count">0</span></li>
-                <li>🌐 Continentes: <span id="coverage-continent-count">0</span></li>
+                <li class="coverage-item">
+                    <span class="coverage-icon">🗺️</span>
+                    <div class="coverage-copy">
+                        <span id="coverage-country-count" class="coverage-value">0</span>
+                        <span class="coverage-label">Países</span>
+                    </div>
+                </li>
+                <li class="coverage-item">
+                    <span class="coverage-icon">🏙️</span>
+                    <div class="coverage-copy">
+                        <span id="coverage-city-count" class="coverage-value">0</span>
+                        <span class="coverage-label">Ciudades</span>
+                    </div>
+                </li>
+                <li class="coverage-item">
+                    <span class="coverage-icon">🌐</span>
+                    <div class="coverage-copy">
+                        <span id="coverage-continent-count" class="coverage-value">0</span>
+                        <span class="coverage-label">Continentes</span>
+                        <span id="coverage-continents-detail" class="coverage-tooltip" title="Sin continentes detectados">Sin continentes detectados</span>
+                    </div>
+                </li>
             </ul>
         </div>
     </div>

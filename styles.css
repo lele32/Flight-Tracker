@@ -300,8 +300,7 @@ h1 {
 
 #frequent-destinations,
 #visited-countries,
-#top-airlines,
-#coverage-metrics {
+#top-airlines {
     max-height: 7.2em;
     overflow-y: auto;
     padding-right: 0.25rem;
@@ -309,15 +308,13 @@ h1 {
 
 #frequent-destinations::-webkit-scrollbar,
 #visited-countries::-webkit-scrollbar,
-#top-airlines::-webkit-scrollbar,
-#coverage-metrics::-webkit-scrollbar {
+#top-airlines::-webkit-scrollbar {
     width: 6px;
 }
 
 #frequent-destinations::-webkit-scrollbar-thumb,
 #visited-countries::-webkit-scrollbar-thumb,
-#top-airlines::-webkit-scrollbar-thumb,
-#coverage-metrics::-webkit-scrollbar-thumb {
+#top-airlines::-webkit-scrollbar-thumb {
     background: #3a3a3a;
     border-radius: 999px;
 }
@@ -344,6 +341,62 @@ h1 {
     color: #bdbdbd;
     font-size: 0.76rem;
     line-height: 1.28;
+}
+
+#coverage-metrics {
+    display: grid;
+    gap: 0.38rem;
+    margin-top: 0.15rem;
+}
+
+.coverage-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.42rem 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.coverage-icon {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.coverage-copy {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.coverage-value {
+    color: #f5f5f5;
+    font-size: 0.98rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+}
+
+.coverage-label {
+    color: #a0a0a0;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+}
+
+.coverage-tooltip {
+    display: block;
+    margin-top: 0.14rem;
+    color: #8f8f8f;
+    font-size: 0.68rem;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 170px;
+    cursor: help;
 }
 
 #add-flight {
