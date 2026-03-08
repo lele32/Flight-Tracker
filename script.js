@@ -1,10 +1,26 @@
 import { collection, getDocs, addDoc } from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js';
 
+// Variable global para almacenar el mapa de Leaflet
+let map = null;
+let markers = {};
+
 // Esperar a que Firebase esté listo
 document.addEventListener('DOMContentLoaded', () => {
+    initializeMap();
     loadFlights();
     setupForm();
 });
+
+function initializeMap() {
+    // Crear el mapa centrado en el mundo
+    map = L.map('map').setView([20, 0], 2);
+    
+    // Agregar tiles de OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19,
+    }).addTo(map);
+}
 
 async function setupForm() {
     const form = document.getElementById('flight-form');
@@ -140,10 +156,13 @@ function processFlights(flights) {
 }
 
 function renderMap(flights) {
-    const mapDiv = document.getElementById('map');
-    mapDiv.innerHTML = ''; // Limpiar
-
-    // Coordenadas aproximadas de ciudades (puedes expandir esta lista)
+    if (!map) return;
+    
+    // Limpiar marcadores previos
+    Object.values(markers).forEach(marker => map.removeLayer(marker));
+    markers = {};
+    
+    // Coordenadas de ciudades
     const cityCoords = {
         'Nueva York': [40.7128, -74.0060],
         'Londres': [51.5074, -0.1278],
@@ -153,22 +172,52 @@ function renderMap(flights) {
         'Roma': [41.9028, 12.4964],
         'Madrid': [40.4168, -3.7038],
         'Berlín': [52.5200, 13.4050],
-        'Ámsterdam': [52.3676, 4.9041]
-        // Agrega más ciudades según sea necesario
+        'Ámsterdam': [52.3676, 4.9041],
+        'Buenos Aires': [-34.6037, -58.3816]
     };
 
+    // Agrupar vuelos por destino
+    const flightsByDestination = {};
     flights.forEach(flight => {
-        const coords = cityCoords[flight.destination];
+        if (!flightsByDestination[flight.destination]) {
+            flightsByDestination[flight.destination] = [];
+        }
+        flightsByDestination[flight.destination].push(flight);
+    });
+
+    // Crear marcadores personalizados
+    Object.entries(flightsByDestination).forEach(([destination, flightList]) => {
+        const coords = cityCoords[destination];
         if (coords) {
-            const marker = document.createElement('div');
-            marker.className = 'marker';
-            marker.style.left = `${(coords[1] + 180) / 360 * 100}%`;
-            marker.style.top = `${(90 - coords[0]) / 180 * 100}%`;
-            marker.title = `${flight.destination} - ${flight.distance} km`;
-            marker.addEventListener('click', () => {
-                alert(`Destino: ${flight.destination}\nDistancia: ${flight.distance} km\nFecha: ${flight.date}`);
+            // Crear HTML personalizado para el popup
+            const popupContent = `
+                <div style="font-family: 'Inter', sans-serif; min-width: 250px;">
+                    <h3 style="margin: 0 0 10px 0; color: #667eea;">✈️ ${destination}</h3>
+                    <p style="margin: 5px 0; color: #555;"><strong>Vuelos:</strong> ${flightList.length}</p>
+                    <p style="margin: 5px 0; color: #555;"><strong>Distancia Total:</strong> ${flightList.reduce((sum, f) => sum + f.distance, 0).toLocaleString()} km</p>
+                    <hr style="border: none; border-top: 1px solid #ddd; margin: 10px 0;">
+                    <div style="max-height: 200px; overflow-y: auto; font-size: 12px;">
+                        ${flightList.map(f => `<div style="padding: 5px 0; border-bottom: 1px solid #f0f0f0;">
+                            <strong>${f.date}</strong> - ${f.distance} km
+                        </div>`).join('')}
+                    </div>
+                </div>
+            `;
+            
+            // Crear marcador personalizado
+            const markerIcon = L.divIcon({
+                className: 'custom-marker',
+                html: `<div class="marker-inner"></div>`,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12],
+                popupAnchor: [0, -12]
             });
-            mapDiv.appendChild(marker);
+            
+            const marker = L.marker(coords, {icon: markerIcon})
+                .bindPopup(popupContent)
+                .addTo(map);
+            
+            markers[destination] = marker;
         }
     });
 }
