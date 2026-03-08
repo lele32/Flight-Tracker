@@ -1186,12 +1186,32 @@ function processFlights(flights) {
     // Calcular equivalentes de distancia
     const worldTours = (totalKm / EARTH_CIRCUMFERENCE_KM).toFixed(2);
     const moonDistances = (totalKm / MOON_DISTANCE_KM).toFixed(2);
+
+    // Calcular métricas de distancia por vuelo
+    const flightsWithDistance = filteredFlights.filter(flight => Number(flight.distance) > 0);
+    const averageDistance = flightsWithDistance.length
+        ? Math.round(totalKm / flightsWithDistance.length)
+        : 0;
+    const longestFlight = flightsWithDistance.reduce((max, current) => {
+        return Number(current.distance) > Number(max.distance || 0) ? current : max;
+    }, {});
+    const shortestFlight = flightsWithDistance.reduce((min, current) => {
+        if (!min.distance) return current;
+        return Number(current.distance) < Number(min.distance) ? current : min;
+    }, {});
     
     // Actualizar DOM
     document.getElementById('total-km').textContent = `${totalKm.toLocaleString()} km`;
     document.getElementById('total-time').textContent = formatDuration(totalDurationHours);
     document.getElementById('world-tours').textContent = worldTours;
     document.getElementById('moon-distance').textContent = moonDistances;
+    document.getElementById('avg-distance').textContent = `${averageDistance.toLocaleString()} km`;
+    document.getElementById('longest-flight').textContent = longestFlight.distance
+        ? `${longestFlight.flightNumber || 'N/A'} • ${longestFlight.destination || 'N/A'} • ${Number(longestFlight.distance).toLocaleString()} km`
+        : '-';
+    document.getElementById('shortest-flight').textContent = shortestFlight.distance
+        ? `${shortestFlight.flightNumber || 'N/A'} • ${shortestFlight.destination || 'N/A'} • ${Number(shortestFlight.distance).toLocaleString()} km`
+        : '-';
 
     // Destinos más frecuentes
     const destinationCount = {};

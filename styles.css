@@ -331,6 +331,21 @@ h1 {
     margin-bottom: 0.35rem;
 }
 
+#flight-distance-stats {
+    margin-top: 0.55rem;
+    padding-top: 0.45rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-left: 0;
+    list-style: none;
+}
+
+#flight-distance-stats li {
+    margin-bottom: 0.22rem;
+    color: #bdbdbd;
+    font-size: 0.76rem;
+    line-height: 1.28;
+}
+
 #add-flight {
     max-width: 920px;
     margin: 0;
