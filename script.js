@@ -327,8 +327,18 @@ function setupAuthControls() {
             await signInWithPopup(auth, googleProvider);
             hideAuthModal();
         } catch (error) {
+            if (error?.code === 'auth/popup-closed-by-user') {
+                console.info('Login con Google cancelado por el usuario.');
+                return;
+            }
+
+            if (error?.code === 'auth/popup-blocked') {
+                alert('El navegador bloqueó la ventana de Google. Habilita popups para este sitio e intenta nuevamente.');
+                return;
+            }
+
             console.error('Error con Google Sign-In:', error);
-            alert('No se pudo iniciar sesión con Google. Verifica que esté habilitado en Firebase Authentication.');
+            alert('No se pudo iniciar sesión con Google. Verifica que Google esté habilitado en Firebase Authentication.');
         }
     });
 
