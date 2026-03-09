@@ -157,14 +157,7 @@ async function lookupFlightLive(flightNumber) {
 async function lookupFlightWithFallback(flightNumber) {
     const value = String(flightNumber || '').trim().toUpperCase();
     if (!value) return null;
-
-    // 1) lookup local rapido
-    const localResult = lookupFlight(value);
-    if (localResult) return localResult;
-
-    // 2) lookup live via backend seguro
-    const liveResult = await lookupFlightLive(value);
-    return liveResult;
+    return await lookupFlightLive(value);
 }
 
 function buildFlightSignature(flight) {
@@ -445,6 +438,11 @@ const flightDatabase = {
         '951': { destination: 'Miami', distance: 4500, country: 'Estados Unidos' },
         '952': { destination: 'Chicago', distance: 7500, country: 'Estados Unidos' }
     }},
+    // Aerolineas Argentinas
+    'AR': { airline: 'Aerolineas Argentinas', routes: {
+        '1388': { origin: 'Buenos Aires', destination: 'Montevideo', distance: 230, country: 'Uruguay' },
+        '1389': { origin: 'Montevideo', destination: 'Buenos Aires', distance: 230, country: 'Argentina' }
+    }},
     // British Airways
     'BA': { airline: 'British Airways', routes: {
         '200': { destination: 'Londres', distance: 11000, country: 'Reino Unido' },
@@ -491,6 +489,7 @@ const flightDatabase = {
 const airlineColors = {
     'AM': '#FF6B35', // Aeromexico - Naranja rojizo
     'AA': '#0073CF', // American Airlines - Azul
+    'AR': '#00AEEF', // Aerolineas Argentinas - Celeste
     'BA': '#2E5C99', // British Airways - Azul oscuro
     'AF': '#002157', // Air France - Azul marino
     'LH': '#E31937', // Lufthansa - Rojo
@@ -505,6 +504,7 @@ const airlineColors = {
 const airlineBrandAssets = {
     'AM': { logo: null },
     'AA': { logo: null },
+    'AR': { logo: null },
     'BA': { logo: null },
     'AF': { logo: null },
     'LH': { logo: null },
@@ -542,6 +542,7 @@ const cityToCountryMap = {
     'Osaka': 'Japón',
     'Sídney': 'Australia',
     'Melbourne': 'Australia',
+    'Montevideo': 'Uruguay',
     'Buenos Aires': 'Argentina'
 };
 
@@ -557,6 +558,7 @@ const countrySpanishToEnglish = {
     'Países Bajos': 'Netherlands',
     'Japón': 'Japan',
     'Australia': 'Australia',
+    'Uruguay': 'Uruguay',
     'Argentina': 'Argentina',
     'Desconocido': 'Unknown'
 };
@@ -584,7 +586,8 @@ const countryToContinentMap = {
     'japon': 'Asia',
     'japón': 'Asia',
     'japan': 'Asia',
-    'australia': 'Oceanía'
+    'australia': 'Oceanía',
+    'uruguay': 'América del Sur'
 };
 
 // Mensaje de inicio
@@ -1712,8 +1715,12 @@ function escapeHtml(value) {
 }
 
 function lookupFlight(flightNumber) {
-    const code = flightNumber.substring(0, 2).toUpperCase();
-    const number = flightNumber.substring(2).toUpperCase();
+    const compact = String(flightNumber || '').trim().toUpperCase().replace(/\s+/g, '').replace(/-/g, '');
+    const match = compact.match(/^([A-Z]{2,3})(\d{1,4})$/);
+    if (!match) return null;
+
+    const code = match[1];
+    const number = match[2];
     
     if (flightDatabase[code] && flightDatabase[code].routes[number]) {
         return flightDatabase[code].routes[number];
@@ -1787,7 +1794,7 @@ async function setupForm() {
             } else {
                 flightInfo.style.display = 'none';
                 flightError.style.display = 'block';
-                flightError.textContent = '❌ Vuelo no encontrado. Si quieres cobertura global, activa el backend de lookup y vuelve a intentar.';
+                flightError.textContent = '❌ Vuelo no encontrado en API o backend no disponible.';
                 submitBtn.disabled = true;
                 currentFlightData = null;
             }
