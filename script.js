@@ -1,4 +1,14 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 import { collection, getDocs, addDoc, deleteDoc, updateDoc, doc } from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js';
+import { firebaseConfig } from "./firebaseConfig.js";
+
+// Inicializar Firebase
+const app = initializeApp(firebaseConfig);
+getAnalytics(app);
+const db = getFirestore(app);
+window.db = db;
 
 // Variable global para almacenar el mapa de Leaflet
 let map = null;
