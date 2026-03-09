@@ -251,16 +251,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
         import { getFirestore } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyB1EeHfOKQ8QSUXAC2b6N7rJcoJaQVFfTA",
-            authDomain: "flightracker-f5493.firebaseapp.com",
-            projectId: "flightracker-f5493",
-            storageBucket: "flightracker-f5493.firebasestorage.app",
-            messagingSenderId: "712197361322",
-            appId: "1:712197361322:web:7d7cfaa410eca80c5b8ad3",
-            measurementId: "G-QZ5VTMWJCY"
-        };
+        import { firebaseConfig } from "./firebaseConfig.js";
 
         const app = initializeApp(firebaseConfig);
         getAnalytics(app);
