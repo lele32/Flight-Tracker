@@ -1159,6 +1159,8 @@ form button:disabled {
 
     #dashboard {
         grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        padding: 0 0.4rem 1rem 0.4rem;
     }
 
     #coverage-metrics {
@@ -1174,20 +1176,107 @@ form button:disabled {
         right: 10px;
         bottom: 10px;
     }
+
+    #map-container {
+        padding: 0.75rem;
+    }
+
+    #map-actions {
+        gap: 0.35rem;
+    }
+}
+
+@media (max-width: 820px) {
+    #dashboard {
+        grid-template-columns: 1fr;
+    }
+
+    .stat {
+        min-height: auto;
+    }
+
+    #period-selector {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        justify-items: stretch;
+        border-radius: 14px;
+        gap: 0.45rem;
+        padding: 0.7rem;
+    }
+
+    #period-selector > span {
+        grid-column: 1 / -1;
+    }
+
+    #period-selector label {
+        width: auto;
+        min-height: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 0.5rem 0.6rem;
+        border: 1px solid #2f2f2f;
+        border-radius: 10px;
+        background: #0f0f0f;
+    }
+
+    .inline-select-label {
+        grid-column: 1;
+        align-self: center;
+    }
+
+    #trip-type-filter {
+        grid-column: 2;
+        width: 100%;
+        min-height: 42px;
+    }
+
+    #open-register-modal,
+    #open-db-manager {
+        width: 100%;
+        min-height: 42px;
+        border-radius: 10px;
+    }
+
+    #map-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    #map-actions {
+        width: 100%;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 0.2rem;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #map-actions > * {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+
+    #map-viewport {
+        height: 58vh;
+        min-height: 380px;
+    }
 }
 
 @media (max-width: 640px) {
     #km-totales-card {
         grid-template-columns: 1fr;
-        gap: 1.5rem;
-        padding: 1.5rem 1rem;
+        gap: 1rem;
+        padding: 1.1rem 0.9rem;
+        margin: 1rem auto;
     }
 
     #km-totales-card .km-section,
     #km-totales-card .km-section:not(:last-child) {
         border-right: none;
         padding-right: 0;
-        padding-bottom: 1.5rem;
+        padding-bottom: 1rem;
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
 
@@ -1196,20 +1285,8 @@ form button:disabled {
         padding-bottom: 0;
     }
 
-    #map-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    #map-actions {
-        width: 100%;
-        justify-content: space-between;
-        gap: 0.4rem;
-    }
-
     #network-frequency-control {
-        width: 100%;
-        justify-content: space-between;
+        padding: 0.25rem 0.45rem;
     }
 
     #network-min-frequency {
@@ -1218,49 +1295,77 @@ form button:disabled {
     }
 
     body {
-        padding: 12px;
-    }
-
-    #period-selector {
-        border-radius: 14px;
-        justify-content: flex-start;
-    }
-
-    #period-selector label {
-        width: 100%;
-    }
-
-    .inline-select,
-    #open-register-modal,
-    #open-db-manager {
-        width: 100%;
-        border-radius: 10px;
+        padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
     }
 
     h1 {
-        font-size: 2rem;
+        font-size: 1.8rem;
+    }
+
+    #hero-subtitle {
+        font-size: 0.86rem;
+        margin: 0.45rem auto 0.9rem auto;
+    }
+
+    #map-container {
+        padding: 0.6rem;
+    }
+
+    #map-container h2 {
+        margin: 0 0 0.45rem 0.1rem;
     }
 
     #map-viewport {
-        height: 56vh;
+        height: 52vh;
+        min-height: 320px;
     }
 
     #network-hubs-panel {
         width: calc(100% - 16px);
         right: 8px;
         bottom: 8px;
+        padding: 0.6rem;
+        border-radius: 10px;
+    }
+
+    #network-hubs-list li {
+        font-size: 0.75rem;
     }
 
     #add-flight {
-        padding: 0.9rem;
         width: 100%;
+        max-height: calc(100vh - 1rem);
+        overflow: auto;
+        padding: 0.85rem;
+        border-radius: 12px;
+    }
+
+    #db-manager {
+        width: 100%;
+        max-height: calc(100vh - 1rem);
+        padding: 0.85rem;
+        border-radius: 12px;
     }
 
     #db-add-form {
         grid-template-columns: 1fr;
+        gap: 0.45rem;
     }
 
     #db-add-submit {
         grid-column: span 1;
+    }
+
+    #db-table-wrapper {
+        max-height: 38vh;
+    }
+
+    form input,
+    form select,
+    #db-add-form input,
+    #db-add-form select,
+    .db-input,
+    .db-select {
+        font-size: 16px;
     }
 }
