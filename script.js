@@ -1554,24 +1554,6 @@ function findCountryMatch(geoCountryName, countryCountsEnglish) {
             }
         }
 
-        // 3. Búsqueda parcial (si contiene la mayoría de letras)
-        for (let [countryName, count] of Object.entries(countryCountsEnglish)) {
-            if (!countryName || typeof countryName !== 'string' || !count) continue;
-            
-            try {
-                const geoLower = normalizedGeo;
-                const countryLower = normalize(countryName);
-                const geoFirstWord = geoLower.split(' ')[0];
-                const countryFirstWord = countryLower.split(' ')[0];
-                
-                if ((geoFirstWord && countryLower.includes(geoFirstWord)) ||
-                    (countryFirstWord && geoLower.includes(countryFirstWord))) {
-                    return count;
-                }
-            } catch (e) {
-                continue;
-            }
-        }
     } catch (e) {
         return 0;
     }
