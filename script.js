@@ -536,7 +536,28 @@ async function lookupFlightLive(flightNumber) {
 async function lookupFlightWithFallback(flightNumber) {
     const value = String(flightNumber || '').trim().toUpperCase();
     if (!value) return null;
-    return await lookupFlightLive(value);
+
+    const liveResult = await lookupFlightLive(value);
+    if (liveResult) return liveResult;
+
+    const localResult = lookupFlight(value);
+    if (!localResult) return null;
+
+    const destination = normalizeDestinationCity(localResult.destination || 'Desconocido');
+    const country = normalizeCountryName(localResult.country, destination);
+
+    return {
+        origin: normalizeOriginCity(localResult.origin || 'Buenos Aires'),
+        destination,
+        distance: Math.max(100, Number(localResult.distance || 1000)),
+        country,
+        departureIata: null,
+        arrivalIata: null,
+        originLat: null,
+        originLng: null,
+        destinationLat: null,
+        destinationLng: null
+    };
 }
 
 function buildFlightSignature(flight) {
@@ -878,6 +899,10 @@ const flightDatabase = {
         '900': { destination: 'Sídney', distance: 12000, country: 'Australia' },
         '901': { destination: 'Melbourne', distance: 11800, country: 'Australia' }
     }},
+    // Avianca
+    'AV': { airline: 'Avianca', routes: {
+        '218': { origin: 'Buenos Aires', destination: 'Bogotá', distance: 4680, country: 'Colombia' }
+    }},
     // JetSmart
     'JA': { airline: 'JetSmart', routes: {
         '3797': { origin: 'Buenos Aires', destination: 'Asunción', distance: 1070, country: 'Paraguay' }
@@ -899,6 +924,7 @@ const airlineColors = {
     'KL': '#00A1E4', // KLM - Azul cielo
     'JL': '#ED1A3A', // Japan Airlines - Rojo
     'QF': '#E31837', // Qantas - Rojo
+    'AV': '#D71920', // Avianca - Rojo
     'JA': '#FF6600'  // JetSmart - Naranja
 };
 
@@ -917,6 +943,7 @@ const airlineBrandAssets = {
     'KL': { logo: null },
     'JL': { logo: null },
     'QF': { logo: null },
+    'AV': { logo: null },
     'JA': { logo: null }
 };
 
@@ -3336,6 +3363,7 @@ function getCountryFlag(country) {
         'Japón': '🇯🇵',
         'Australia': '🇦🇺',
         'Chile': '🇨🇱',
+        'Colombia': '🇨🇴',
         'Uruguay': '🇺🇾',
         'Argentina': '🇦🇷',
         'Paraguay': '🇵🇾'
