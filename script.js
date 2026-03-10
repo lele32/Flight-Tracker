@@ -2648,6 +2648,40 @@ async function setupForm() {
         flightError.style.display = 'none';
     };
 
+    const buildManualFlightData = (flightNumberValue) => {
+        const originInput = prompt('No encontramos ese vuelo automaticamente. Ingresa ciudad de origen:', 'Bogotá');
+        if (originInput === null) return null;
+
+        const destinationInput = prompt('Ingresa ciudad de destino:', 'Buenos Aires');
+        if (destinationInput === null) return null;
+
+        const normalizedOrigin = normalizeOriginCity(originInput.trim());
+        const normalizedDestination = normalizeDestinationCity(destinationInput.trim());
+        if (!normalizedOrigin || !normalizedDestination || normalizedDestination === 'Desconocido') {
+            alert('Origen o destino inválido. Vuelve a intentarlo.');
+            return null;
+        }
+
+        const countryInput = prompt(
+            'Ingresa pais destino (Enter para usar deteccion automatica):',
+            normalizeCountryName('', normalizedDestination)
+        );
+        if (countryInput === null) return null;
+
+        return {
+            origin: normalizedOrigin,
+            destination: normalizedDestination,
+            distance: calculateRouteDistanceKm(normalizedOrigin, normalizedDestination, 1000),
+            country: normalizeCountryName(countryInput.trim(), normalizedDestination),
+            departureIata: String(flightNumberValue || '').substring(0, 2).toUpperCase() || null,
+            arrivalIata: null,
+            originLat: null,
+            originLng: null,
+            destinationLat: null,
+            destinationLng: null
+        };
+    };
+
     flightNumberInput.addEventListener('blur', async () => {
         const flightNumber = flightNumberInput.value.trim();
         if (flightNumber.length >= 3) {
@@ -2658,6 +2692,17 @@ async function setupForm() {
                 setFlightInfoPanel(flightData);
                 submitBtn.disabled = false;
             } else {
+                const useManualData = confirm('No pudimos reconocer el vuelo automaticamente. ¿Quieres cargarlo manualmente?');
+                if (useManualData) {
+                    const manualData = buildManualFlightData(flightNumber);
+                    if (manualData) {
+                        currentFlightData = manualData;
+                        setFlightInfoPanel(manualData);
+                        submitBtn.disabled = false;
+                        return;
+                    }
+                }
+
                 flightInfo.style.display = 'none';
                 flightError.style.display = 'block';
                 flightError.textContent = '❌ Vuelo no encontrado en proveedores ni fallback local.';
