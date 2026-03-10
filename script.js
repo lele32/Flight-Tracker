@@ -57,7 +57,7 @@ let currentUser = null;
 const googleProvider = new GoogleAuthProvider();
 let openAuthModal = () => {};
 const FLIGHT_LOOKUP_PROXY_URL_STORAGE = 'flightTracker_lookup_proxy_url';
-const FLIGHT_LOOKUP_PROXY_URL_DEFAULT = 'https://us-central1-flightracker-f5493.cloudfunctions.net/lookupFlight';
+const FLIGHT_LOOKUP_PROXY_URL_DEFAULT = 'http://localhost:3000/lookupFlight';
 let isLiveLookupAvailable = true;
 
 function validatePasswordStrength(password) {
@@ -142,11 +142,14 @@ async function lookupFlightLive(flightNumber) {
         const payload = await response.json();
         if (!payload || payload.found === false) return null;
 
+        const destination = normalizeDestinationCity(payload.destination || 'Desconocido');
+        const country = normalizeCountryName(payload.country, destination);
+
         return {
             origin: payload.origin || 'Desconocido',
-            destination: payload.destination || 'Desconocido',
+            destination,
             distance: Math.max(100, Number(payload.distance || 1000)),
-            country: payload.country || cityToCountryMap[payload.destination] || 'Desconocido'
+            country
         };
     } catch {
         isLiveLookupAvailable = false;
@@ -172,12 +175,14 @@ function buildFlightSignature(flight) {
 function normalizeFlightPayload(flight) {
     const distance = Number(flight.distance || 0);
     const safeDistance = Number.isFinite(distance) && distance > 0 ? distance : 100;
+    const destination = normalizeDestinationCity(flight.destination || 'Desconocido');
+    const country = normalizeCountryName(flight.country, destination);
     return {
         origin: flight.origin || 'Buenos Aires',
-        destination: flight.destination || 'Desconocido',
+        destination,
         distance: safeDistance,
         date: flight.date || new Date().toISOString().slice(0, 10),
-        country: flight.country || cityToCountryMap[flight.destination] || 'Desconocido',
+        country,
         flightNumber: (flight.flightNumber || 'LEG000').toUpperCase(),
         category: flight.category || 'Personal',
         rating: Number(flight.rating || 5),
@@ -422,6 +427,14 @@ const continentColors = {
 
 // Base de datos de vuelos simulados
 const flightDatabase = {
+    // Viva
+    'VB': { airline: 'Viva', routes: {
+        '1100': { destination: 'Monterrey', distance: 710, country: 'México' }
+    }},
+    // LATAM
+    'LA': { airline: 'LATAM', routes: {
+        '8000': { destination: 'Santiago', distance: 1130, country: 'Chile' }
+    }},
     // Aeromexico
     'AM': { airline: 'Aeromexico', routes: {
         '190': { origin: 'Ciudad de México', destination: 'Mexicali', distance: 2170, country: 'México' },
@@ -487,6 +500,8 @@ const flightDatabase = {
 
 // Colores por aerolínea
 const airlineColors = {
+    'VB': '#4B5563', // Viva - Gris oscuro
+    'LA': '#2E5C99', // LATAM - Azul
     'AM': '#FF6B35', // Aeromexico - Naranja rojizo
     'AA': '#0073CF', // American Airlines - Azul
     'AR': '#00AEEF', // Aerolineas Argentinas - Celeste
@@ -502,6 +517,8 @@ const airlineColors = {
 
 // Logos embebidos para evitar dependencias de red externas.
 const airlineBrandAssets = {
+    'VB': { logo: null },
+    'LA': { logo: null },
     'AM': { logo: null },
     'AA': { logo: null },
     'AR': { logo: null },
@@ -526,6 +543,8 @@ const cityToCountryMap = {
     'Chicago': 'Estados Unidos',
     'Los Ángeles': 'Estados Unidos',
     'México': 'México',
+    'Santiago': 'Chile',
+    'Santiago de Chile': 'Chile',
     'Londres': 'Reino Unido',
     'Manchester': 'Reino Unido',
     'París': 'Francia',
@@ -558,6 +577,7 @@ const countrySpanishToEnglish = {
     'Países Bajos': 'Netherlands',
     'Japón': 'Japan',
     'Australia': 'Australia',
+    'Chile': 'Chile',
     'Uruguay': 'Uruguay',
     'Argentina': 'Argentina',
     'Desconocido': 'Unknown'
@@ -587,8 +607,101 @@ const countryToContinentMap = {
     'japón': 'Asia',
     'japan': 'Asia',
     'australia': 'Oceanía',
+    'chile': 'América del Sur',
     'uruguay': 'América del Sur'
 };
+
+const countryAliasToSpanish = {
+    'united states': 'Estados Unidos',
+    'united states of america': 'Estados Unidos',
+    'usa': 'Estados Unidos',
+    'u.s.a.': 'Estados Unidos',
+    'united kingdom': 'Reino Unido',
+    'uk': 'Reino Unido',
+    'great britain': 'Reino Unido',
+    'france': 'Francia',
+    'germany': 'Alemania',
+    'italy': 'Italia',
+    'spain': 'España',
+    'netherlands': 'Países Bajos',
+    'japan': 'Japón',
+    'australia': 'Australia',
+    'us': 'Estados Unidos',
+    'gb': 'Reino Unido',
+    'mx': 'México',
+    'ar': 'Argentina',
+    'uy': 'Uruguay',
+    'cl': 'Chile',
+    'mexico': 'México',
+    'chile': 'Chile',
+    'uruguay': 'Uruguay',
+    'argentina': 'Argentina',
+    'unknown': 'Desconocido'
+};
+
+const airportKeywordToCity = {
+    'aeroparque': 'Buenos Aires',
+    'jorge newbery': 'Buenos Aires',
+    'ezeiza': 'Buenos Aires',
+    'pistarini': 'Buenos Aires',
+    'gen mariano escobedo': 'Monterrey',
+    'mariano escobedo': 'Monterrey',
+    'benito juarez': 'Ciudad de México',
+    'internacional benito juarez': 'Ciudad de México',
+    'mexico city international': 'Ciudad de México',
+    'arturo merino benitez': 'Santiago',
+    'carrasco': 'Montevideo',
+    'scl': 'Santiago',
+    'mvd': 'Montevideo',
+    'aep': 'Buenos Aires',
+    'eze': 'Buenos Aires'
+};
+
+function normalizeText(value) {
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase();
+}
+
+function normalizeDestinationCity(destination) {
+    const raw = String(destination || '').trim();
+    if (!raw) return 'Desconocido';
+    if (cityToCountryMap[raw]) return raw;
+
+    const normalized = normalizeText(raw);
+    for (const [keyword, city] of Object.entries(airportKeywordToCity)) {
+        if (normalized.includes(keyword)) {
+            return city;
+        }
+    }
+
+    const cleaned = raw
+        .replace(/international airport/gi, '')
+        .replace(/international/gi, '')
+        .replace(/airport/gi, '')
+        .replace(/aeropuerto/gi, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+
+    if (cityToCountryMap[cleaned]) return cleaned;
+    return raw;
+}
+
+function normalizeCountryName(country, destination = '') {
+    const rawCountry = String(country || '').trim();
+    const destinationCity = normalizeDestinationCity(destination);
+
+    if (rawCountry) {
+        if (cityToCountryMap[rawCountry]) return cityToCountryMap[rawCountry];
+        const alias = countryAliasToSpanish[normalizeText(rawCountry)];
+        if (alias) return alias;
+        return rawCountry;
+    }
+
+    return cityToCountryMap[destinationCity] || 'Desconocido';
+}
 
 // Mensaje de inicio
 console.log('%c✈️ Flight Tracker iniciado', 'color: #667eea; font-size: 16px; font-weight: bold;');
@@ -1987,7 +2100,8 @@ async function loadFlights() {
 
             // Migra documentos sin país: asignar país basado en la ciudad destino
             if (!data.country && data.destination) {
-                data.country = cityToCountryMap[data.destination] || 'Desconocido';
+                const normalizedDestination = normalizeDestinationCity(data.destination);
+                data.country = normalizeCountryName('', normalizedDestination);
                 migrationPayload.country = data.country;
                 console.log(`%c🗺️ País asignado a ${data.flightNumber}: ${data.country}`, 'color: #ffc107; font-size: 11px;');
             }
@@ -2100,9 +2214,10 @@ function processFlights(flights) {
     // Destinos más frecuentes
     const destinationCount = {};
     filteredFlights.forEach(flight => {
-        const dest = flight.destination;
+        const dest = normalizeDestinationCity(flight.destination);
+        const country = normalizeCountryName(flight.country, dest);
         if (!destinationCount[dest]) {
-            destinationCount[dest] = { count: 0, country: flight.country || '' };
+            destinationCount[dest] = { count: 0, country };
         }
         destinationCount[dest].count += 1;
     });
@@ -2121,18 +2236,16 @@ function processFlights(flights) {
     const cities = new Set();
     const continents = new Set();
     filteredFlights.forEach(flight => {
-        if (flight.country) {
-            countries.add(flight.country);
-            const continent = getContinentFromCountry(flight.country);
+        const normalizedDestination = normalizeDestinationCity(flight.destination);
+        const normalizedCountry = normalizeCountryName(flight.country, normalizedDestination);
+
+        if (normalizedCountry && normalizedCountry !== 'Desconocido') {
+            countries.add(normalizedCountry);
+            const continent = getContinentFromCountry(normalizedCountry);
             if (continent) continents.add(continent);
         }
-        if (flight.destination) {
-            cities.add(flight.destination);
-            if (!flight.country) {
-                const inferredCountry = cityToCountryMap[flight.destination];
-                const inferredContinent = getContinentFromCountry(inferredCountry);
-                if (inferredContinent) continents.add(inferredContinent);
-            }
+        if (normalizedDestination && normalizedDestination !== 'Desconocido') {
+            cities.add(normalizedDestination);
         }
     });
     const countryList = document.getElementById('visited-countries');
@@ -2478,10 +2591,13 @@ function getCountryFlag(country) {
         'Países Bajos': '🇳🇱',
         'Japón': '🇯🇵',
         'Australia': '🇦🇺',
+        'Chile': '🇨🇱',
+        'Uruguay': '🇺🇾',
         'Argentina': '🇦🇷'
     };
 
-    return countryFlags[country] || '🏳️';
+    const normalizedCountry = normalizeCountryName(country);
+    return countryFlags[normalizedCountry] || '🏳️';
 }
 
 function getCategoryBadge(category) {

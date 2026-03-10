@@ -1,10 +1,12 @@
-const { onRequest } = require('firebase-functions/v2/https');
-const logger = require('firebase-functions/logger');
-const admin = require('firebase-admin');
+const express = require('express');
+const cors = require('cors');
 
-if (!admin.apps.length) {
-    admin.initializeApp();
-}
+const app = express();
+const PORT = 3000;
+
+// Habilitar CORS para todos los orígenes en desarrollo
+app.use(cors());
+app.use(express.json());
 
 function haversineDistanceKm(lat1, lon1, lat2, lon2) {
     const toRad = (deg) => (deg * Math.PI) / 180;
@@ -27,7 +29,7 @@ function pickFlightCandidate(items) {
     });
 }
 
-async function getAirportCoords(iataCode, apiKey) {
+async function getAirportDetails(iataCode, apiKey) {
     const iata = String(iataCode || '').trim().toUpperCase();
     if (!iata) return null;
 
@@ -39,46 +41,23 @@ async function getAirportCoords(iataCode, apiKey) {
     const airport = payload?.data?.[0];
     const lat = Number(airport?.latitude);
     const lon = Number(airport?.longitude);
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    const hasCoords = Number.isFinite(lat) && Number.isFinite(lon);
 
-    return { lat, lon };
+    return { 
+        lat: hasCoords ? lat : null,
+        lon: hasCoords ? lon : null,
+        city: airport?.city || null,
+        country: airport?.country_name || airport?.country_iso2 || null,
+        airportName: airport?.airport_name || null
+    };
 }
 
-async function verifyFirebaseUser(req) {
-    const authHeader = req.get('Authorization') || '';
-    if (!authHeader.startsWith('Bearer ')) {
-        return null;
-    }
-
-    const idToken = authHeader.replace('Bearer ', '').trim();
-
-    if (!idToken) {
-        return null;
-    }
-
-    try {
-        return await admin.auth().verifyIdToken(idToken);
-    } catch {
-        return null;
-    }
-}
-
-exports.lookupFlight = onRequest({ region: 'us-central1', cors: true }, async (req, res) => {
-    if (req.method !== 'GET') {
-        res.status(405).json({ error: 'method-not-allowed' });
-        return;
-    }
-
-    const user = await verifyFirebaseUser(req);
-    if (!user) {
-        res.status(401).json({ error: 'unauthenticated' });
-        return;
-    }
-
+app.get('/lookupFlight', async (req, res) => {
+    // Autenticación desactivada para desarrollo local
+    
     const flightNumberRaw = String(req.query.flightNumber || '').trim().toUpperCase();
     if (!/^[A-Z0-9-]{3,8}$/.test(flightNumberRaw)) {
-        res.status(400).json({ error: 'invalid-flight-number' });
-        return;
+        return res.status(400).json({ error: 'invalid-flight-number' });
     }
 
     const apiKey = '737c0c899deb095b6fa805974f9c2b7b';
@@ -87,33 +66,33 @@ exports.lookupFlight = onRequest({ region: 'us-central1', cors: true }, async (r
         const flightsUrl = `https://api.aviationstack.com/v1/flights?access_key=${encodeURIComponent(apiKey)}&flight_iata=${encodeURIComponent(flightNumberRaw)}&limit=10`;
         const flightsResponse = await fetch(flightsUrl);
         if (!flightsResponse.ok) {
-            res.status(502).json({ error: 'provider-unavailable' });
-            return;
+            return res.status(502).json({ error: 'provider-unavailable' });
         }
 
         const flightsPayload = await flightsResponse.json();
         if (flightsPayload?.error) {
-            logger.warn('Aviationstack error', flightsPayload.error);
-            res.status(200).json({ found: false });
-            return;
+            console.warn('Aviationstack error', flightsPayload.error);
+            return res.status(200).json({ found: false });
         }
 
         const item = pickFlightCandidate(flightsPayload?.data);
         if (!item) {
-            res.status(200).json({ found: false });
-            return;
+            return res.status(200).json({ found: false });
         }
 
         const departure = item.departure || {};
         const arrival = item.arrival || {};
-        const origin = departure.airport || departure.iata || 'Desconocido';
-        const destination = arrival.airport || arrival.iata || 'Desconocido';
+
+        const depDetails = await getAirportDetails(departure.iata, apiKey);
+        const arrDetails = await getAirportDetails(arrival.iata, apiKey);
+
+        const origin = depDetails?.city || departure.city || departure.airport || departure.iata || 'Desconocido';
+        const destination = arrDetails?.city || arrival.city || arrival.airport || arrival.iata || 'Desconocido';
 
         let distance = 1000;
-        const depCoords = await getAirportCoords(departure.iata, apiKey);
-        const arrCoords = await getAirportCoords(arrival.iata, apiKey);
-        if (depCoords && arrCoords) {
-            distance = haversineDistanceKm(depCoords.lat, depCoords.lon, arrCoords.lat, arrCoords.lon);
+        let country = arrDetails?.country || arrival.country || 'Desconocido';
+        if (depDetails?.lat != null && depDetails?.lon != null && arrDetails?.lat != null && arrDetails?.lon != null) {
+            distance = haversineDistanceKm(depDetails.lat, depDetails.lon, arrDetails.lat, arrDetails.lon);
         }
 
         res.status(200).json({
@@ -121,12 +100,17 @@ exports.lookupFlight = onRequest({ region: 'us-central1', cors: true }, async (r
             origin,
             destination,
             distance: Math.max(100, distance),
-            country: arrival.country || 'Desconocido',
+            country,
             departureIata: departure.iata || null,
             arrivalIata: arrival.iata || null
         });
     } catch (error) {
-        logger.error('lookupFlight failed', error);
+        console.error('lookupFlight failed', error);
         res.status(500).json({ error: 'internal-error' });
     }
+});
+
+app.listen(PORT, () => {
+    console.log(`✅ Backend corriendo en http://localhost:${PORT}`);
+    console.log(`   Endpoint: http://localhost:${PORT}/lookupFlight`);
 });
