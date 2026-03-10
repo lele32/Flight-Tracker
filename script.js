@@ -58,7 +58,37 @@ const googleProvider = new GoogleAuthProvider();
 let openAuthModal = () => {};
 const FLIGHT_LOOKUP_PROXY_URL_STORAGE = 'flightTracker_lookup_proxy_url';
 const FLIGHT_LOOKUP_PROXY_URL_DEFAULT = 'https://flight-tracker-deploy.vercel.app/api/lookupFlight';
+const FLIGHTS_CACHE_KEY = 'flightTracker_cached_flights_v1';
 let isLiveLookupAvailable = true;
+
+const demoFallbackFlights = [
+    { origin: 'Buenos Aires', destination: 'Montevideo', distance: 230, date: '2026-01-12', country: 'Uruguay', flightNumber: 'AR1388', category: 'Personal', rating: 5, durationHours: 1.2 },
+    { origin: 'Buenos Aires', destination: 'Santiago', distance: 1130, date: '2026-01-25', country: 'Chile', flightNumber: 'LA8000', category: 'Personal', rating: 4, durationHours: 2.3 },
+    { origin: 'Buenos Aires', destination: 'Ciudad de Mexico', distance: 7380, date: '2026-02-10', country: 'Mexico', flightNumber: 'AM191', category: 'Trabajo', rating: 4, durationHours: 9.8 },
+    { origin: 'Buenos Aires', destination: 'Madrid', distance: 10000, date: '2026-02-20', country: 'Espana', flightNumber: 'IB600', category: 'Trabajo', rating: 5, durationHours: 12.5 },
+    { origin: 'Buenos Aires', destination: 'Nueva York', distance: 8500, date: '2026-03-02', country: 'Estados Unidos', flightNumber: 'AA953', category: 'Personal', rating: 5, durationHours: 10.8 }
+];
+
+function saveFlightsCache(flights) {
+    try {
+        const normalized = (flights || []).map((flight) => normalizeFlightPayload(flight));
+        localStorage.setItem(FLIGHTS_CACHE_KEY, JSON.stringify(normalized));
+    } catch {
+        // Ignore cache write errors (quota/private mode)
+    }
+}
+
+function loadFlightsCache() {
+    try {
+        const raw = localStorage.getItem(FLIGHTS_CACHE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed.map((flight, idx) => ({ id: `cached-${idx + 1}`, ...normalizeFlightPayload(flight) }));
+    } catch {
+        return [];
+    }
+}
 
 function validatePasswordStrength(password) {
     const checks = {
@@ -84,7 +114,7 @@ function getGoogleAuthErrorMessage(error, context = 'login') {
         case 'auth/operation-not-allowed':
             return 'Google Sign-In no esta habilitado en Firebase Authentication > Sign-in method.';
         case 'auth/unauthorized-domain':
-            return 'Dominio no autorizado. Agrega lele32.github.io en Firebase Authentication > Settings > Authorized domains.';
+            return `Dominio no autorizado. Agrega ${window.location.hostname} en Firebase Authentication > Settings > Authorized domains.`;
         case 'auth/popup-blocked':
             return 'El navegador bloqueo la ventana de Google. Habilita popups para este sitio e intenta nuevamente.';
         case 'auth/popup-closed-by-user':
@@ -2069,7 +2099,11 @@ async function loadSampleData() {
 async function loadFlights() {
     const flightsRef = getFlightsCollectionRef();
     if (!flightsRef) {
-        allFlights = [];
+        const cachedFlights = loadFlightsCache();
+        allFlights = cachedFlights.length ? cachedFlights : demoFallbackFlights.map((flight, idx) => ({
+            id: `demo-${idx + 1}`,
+            ...normalizeFlightPayload(flight)
+        }));
         processFlights(allFlights);
         renderDatabaseTable(allFlights);
         return;
@@ -2124,10 +2158,18 @@ async function loadFlights() {
 
             allFlights.push({ id: docSnapshot.id, ...data });
         }
+        saveFlightsCache(allFlights);
         processFlights(allFlights);
         renderDatabaseTable(allFlights);
     } catch (error) {
         console.error('Error loading flights:', error);
+        const cachedFlights = loadFlightsCache();
+        if (cachedFlights.length) {
+            allFlights = cachedFlights;
+            processFlights(allFlights);
+            renderDatabaseTable(allFlights);
+            return;
+        }
         if (error?.code === 'permission-denied') {
             console.warn('Firestore denegó permisos. Revisa Authentication y Firestore Rules para users/{uid}/flights.');
         } else {
