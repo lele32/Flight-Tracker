@@ -91,6 +91,19 @@ const cityCoordinates = {
     'Melbourne': [-37.8136, 144.9631]
 };
 
+const airportCoordinates = {
+    AEP: [-34.5589, -58.4156],
+    EZE: [-34.8222, -58.5358],
+    MVD: [-34.8384, -56.0308],
+    MTY: [25.7785, -100.1069],
+    MEX: [19.4361, -99.0719],
+    SCL: [-33.3929, -70.7858],
+    JFK: [40.6413, -73.7781],
+    EWR: [40.6895, -74.1745],
+    MAD: [40.4722, -3.5608],
+    LIM: [-12.0219, -77.1143]
+};
+
 function normalizeCityKey(value) {
     return String(value || '')
         .normalize('NFD')
@@ -111,6 +124,34 @@ function getCityCoordinates(cityName) {
         }
     }
     return null;
+}
+
+function getAirportCoordinates(iataCode) {
+    const key = String(iataCode || '').trim().toUpperCase();
+    if (!key) return null;
+    return airportCoordinates[key] || null;
+}
+
+function getFlightOriginCoords(flight) {
+    const lat = Number(flight?.originLat);
+    const lng = Number(flight?.originLng);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) return [lat, lng];
+
+    const byIata = getAirportCoordinates(flight?.departureIata);
+    if (byIata) return byIata;
+
+    return getCityCoordinates(flight?.origin || 'Buenos Aires');
+}
+
+function getFlightDestinationCoords(flight) {
+    const lat = Number(flight?.destinationLat);
+    const lng = Number(flight?.destinationLng);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) return [lat, lng];
+
+    const byIata = getAirportCoordinates(flight?.arrivalIata);
+    if (byIata) return byIata;
+
+    return getCityCoordinates(flight?.destination);
 }
 
 const demoFallbackFlights = [
@@ -239,7 +280,13 @@ async function lookupFlightLive(flightNumber) {
             origin: payload.origin || 'Desconocido',
             destination,
             distance: Math.max(100, Number(payload.distance || 1000)),
-            country
+            country,
+            departureIata: String(payload.departureIata || '').toUpperCase() || null,
+            arrivalIata: String(payload.arrivalIata || '').toUpperCase() || null,
+            originLat: Number(payload.originLat),
+            originLng: Number(payload.originLng),
+            destinationLat: Number(payload.destinationLat),
+            destinationLng: Number(payload.destinationLng)
         };
     } catch {
         isLiveLookupAvailable = false;
@@ -276,7 +323,13 @@ function normalizeFlightPayload(flight) {
         flightNumber: (flight.flightNumber || 'LEG000').toUpperCase(),
         category: flight.category || 'Personal',
         rating: Number(flight.rating || 5),
-        durationHours: Number(flight.durationHours || estimateDurationHours(safeDistance))
+        durationHours: Number(flight.durationHours || estimateDurationHours(safeDistance)),
+        departureIata: String(flight.departureIata || '').toUpperCase() || null,
+        arrivalIata: String(flight.arrivalIata || '').toUpperCase() || null,
+        originLat: Number.isFinite(Number(flight.originLat)) ? Number(flight.originLat) : null,
+        originLng: Number.isFinite(Number(flight.originLng)) ? Number(flight.originLng) : null,
+        destinationLat: Number.isFinite(Number(flight.destinationLat)) ? Number(flight.destinationLat) : null,
+        destinationLng: Number.isFinite(Number(flight.destinationLng)) ? Number(flight.destinationLng) : null
     };
 }
 
@@ -1541,8 +1594,8 @@ function animateFlight(flight, sourceFlights, callback) {
     if (!map) return callback();
 
     const origin = flight.origin || 'Buenos Aires';
-    const originCoords = getCityCoordinates(origin);
-    const destCoords = getCityCoordinates(flight.destination);
+    const originCoords = getFlightOriginCoords(flight);
+    const destCoords = getFlightDestinationCoords(flight);
 
     if (!destCoords || !originCoords) {
         renderMap(sourceFlights);
@@ -2008,7 +2061,13 @@ async function setupForm() {
                 flightNumber,
                 category,
                 rating,
-                durationHours
+                durationHours,
+                departureIata: currentFlightData.departureIata || null,
+                arrivalIata: currentFlightData.arrivalIata || null,
+                originLat: Number.isFinite(currentFlightData.originLat) ? currentFlightData.originLat : null,
+                originLng: Number.isFinite(currentFlightData.originLng) ? currentFlightData.originLng : null,
+                destinationLat: Number.isFinite(currentFlightData.destinationLat) ? currentFlightData.destinationLat : null,
+                destinationLng: Number.isFinite(currentFlightData.destinationLng) ? currentFlightData.destinationLng : null
             });
             alert(`✈️ Vuelo ${flightNumber} registrado exitosamente`);
             form.reset();
@@ -2433,7 +2492,8 @@ function renderMap(flights, highlightedFlight = null) {
 
     // Crear marcadores para cada combinación origen-aerolínea
     Object.values(flightsByOriginAirline).forEach(({ origin, airlineCode, flights: airlineFlights }) => {
-        const originCoords = getCityCoordinates(origin);
+        const referenceFlight = airlineFlights[0];
+        const originCoords = getFlightOriginCoords(referenceFlight);
         if (!originCoords) return;
 
         const airlineColor = airlineColors[airlineCode] || '#0A84FF';
@@ -2498,8 +2558,9 @@ function renderMap(flights, highlightedFlight = null) {
 
     // Crear líneas punteadas por ruta
     Object.values(flightRoutes).forEach((route) => {
-        const originCoords = getCityCoordinates(route.origin);
-        const destCoords = getCityCoordinates(route.destination);
+        const referenceFlight = route.flights[0];
+        const originCoords = getFlightOriginCoords(referenceFlight);
+        const destCoords = getFlightDestinationCoords(referenceFlight);
         if (destCoords && originCoords) {
             const airlineColor = airlineColors[route.airline] || '#0A84FF';
             const routeIntensity = route.flights.length;
@@ -2534,7 +2595,8 @@ function renderMap(flights, highlightedFlight = null) {
 
     // Crear marcadores de destino
     Object.entries(flightsByDestination).forEach(([destination, airlines]) => {
-        const destCoords = getCityCoordinates(destination);
+        const firstFlight = Object.values(airlines)[0]?.[0];
+        const destCoords = getFlightDestinationCoords(firstFlight);
         if (destCoords) {
             // Obtener el primer airline para el color del marcador
             const airlineCodes = Object.keys(airlines);
@@ -2594,8 +2656,8 @@ function renderMap(flights, highlightedFlight = null) {
 
     if (highlightedFlight?.destination && highlightedFlight?.origin) {
         const origin = highlightedFlight.origin || 'Buenos Aires';
-        const originCoords = getCityCoordinates(origin);
-        const destCoords = getCityCoordinates(highlightedFlight.destination);
+        const originCoords = getFlightOriginCoords(highlightedFlight);
+        const destCoords = getFlightDestinationCoords(highlightedFlight);
         
         if (destCoords && originCoords) {
             const airlineCode = (highlightedFlight.flightNumber || '').substring(0, 2).toUpperCase();
@@ -2619,6 +2681,11 @@ function renderMap(flights, highlightedFlight = null) {
             }).addTo(map);
             flightLines.push(pulseMarker);
         }
+    }
+
+    const timelineStatus = document.getElementById('timeline-status');
+    if (timelineStatus && !isAnimationMode) {
+        timelineStatus.textContent = `Modo normal • ${validFlights.length} vuelos`;
     }
 }
 

@@ -260,7 +260,11 @@ module.exports = async (req, res) => {
             distance: Math.max(100, distance),
             country,
             departureIata: departure.iata || null,
-            arrivalIata: arrival.iata || null
+            arrivalIata: arrival.iata || null,
+            originLat: depDetails?.lat ?? null,
+            originLng: depDetails?.lon ?? null,
+            destinationLat: arrDetails?.lat ?? null,
+            destinationLng: arrDetails?.lon ?? null
         });
     } catch (error) {
         const responseTime = Date.now() - startTime;
