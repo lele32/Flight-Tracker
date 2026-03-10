@@ -103,16 +103,104 @@ const cityCoordinates = {
 };
 
 const airportCoordinates = {
-    AEP: [-34.5589, -58.4156],
-    EZE: [-34.8222, -58.5358],
-    MVD: [-34.8384, -56.0308],
-    MTY: [25.7785, -100.1069],
-    MEX: [19.4361, -99.0719],
-    SCL: [-33.3929, -70.7858],
-    JFK: [40.6413, -73.7781],
-    EWR: [40.6895, -74.1745],
-    MAD: [40.4722, -3.5608],
-    LIM: [-12.0219, -77.1143]
+    // Argentina
+    AEP: [-34.5589, -58.4156], EZE: [-34.8222, -58.5358],
+    COR: [-31.3236, -64.2082], MDZ: [-32.8317, -68.7928],
+    ROS: [-32.9036, -60.7850], BRC: [-41.1512, -71.1575],
+    USH: [-54.8432, -68.2958], NQN: [-38.9499, -68.1557],
+    SLA: [-24.8560, -65.4862], JUJ: [-24.3928, -65.0979],
+    TUC: [-26.8409, -65.1049], IGR: [-25.7373, -54.4734],
+    CTC: [-28.5956, -65.7516], IRJ: [-29.3816, -66.7958],
+    SFN: [-31.7117, -60.8117], RGL: [-51.6089, -69.3126],
+    PMY: [-42.7592, -65.1027], BHI: [-38.7247, -62.1693],
+    // Uruguay / Chile / Bolivia / Paraguay
+    MVD: [-34.8384, -56.0308], SCL: [-33.3929, -70.7858],
+    CCP: [-36.7722, -73.0631], IQQ: [-20.5353, -70.1811],
+    ANF: [-23.4444, -70.4450], PMC: [-41.4392, -73.0944],
+    VVI: [-17.6448, -63.1354], LPB: [-16.5133, -68.1925],
+    CBB: [-17.4211, -66.1771], ASU: [-25.2398, -57.5197],
+    // Peru / Ecuador / Colombia / Venezuela
+    LIM: [-12.0219, -77.1143], CUZ: [-13.5357, -71.9387],
+    AQP: [-16.3411, -71.5830], UIO: [-0.1222, -78.3575],
+    GYE: [-2.1574, -79.8836], BOG: [4.7016, -74.1469],
+    MDE: [6.1645, -75.4231], CLO: [3.5432, -76.3816],
+    CTG: [10.4424, -75.5130], CCS: [10.6031, -66.9906],
+    // Brasil
+    GRU: [-23.4356, -46.4731], GIG: [-22.8099, -43.2505],
+    CGH: [-23.6261, -46.6558], SDU: [-22.9105, -43.1631],
+    BSB: [-15.8711, -47.9186], CNF: [-19.6244, -43.9719],
+    SSA: [-12.9086, -38.3225], FOR: [-3.7763, -38.5326],
+    REC: [-8.1265, -34.9228], POA: [-29.9944, -51.1714],
+    CWB: [-25.5285, -49.1758], BEL: [-1.3792, -48.4763],
+    MAO: [-3.0386, -60.0497], FLN: [-27.6703, -48.5525],
+    // México / Centroamérica / Caribe
+    MEX: [19.4361, -99.0719], MTY: [25.7785, -100.1069],
+    GDL: [20.5218, -103.3112], CUN: [21.0365, -86.8770],
+    TIJ: [32.5411, -116.9700], MID: [20.9370, -89.6575],
+    PVR: [20.6801, -105.2544], SJD: [23.1518, -109.7210],
+    HAV: [22.9892, -82.4091], PTY: [9.0714, -79.3835],
+    SJO: [9.9939, -84.2088], GUA: [14.5833, -90.5275],
+    // USA
+    JFK: [40.6413, -73.7781], EWR: [40.6895, -74.1745],
+    LGA: [40.7769, -73.8740], MIA: [25.7959, -80.2870],
+    LAX: [33.9425, -118.4081], ORD: [41.9742, -87.9073],
+    MDW: [41.7868, -87.7522], DFW: [32.8998, -97.0403],
+    ATL: [33.6407, -84.4277], SFO: [37.6189, -122.3750],
+    BOS: [42.3656, -71.0096], SEA: [47.4502, -122.3088],
+    DEN: [39.8561, -104.6737], LAS: [36.0840, -115.1537],
+    PHX: [33.4373, -112.0078], IAH: [29.9902, -95.3368],
+    DCA: [38.8512, -77.0402], IAD: [38.9445, -77.4558],
+    PHL: [39.8719, -75.2411], MCO: [28.4294, -81.3090],
+    FLL: [26.0726, -80.1528], TPA: [27.9755, -82.5332],
+    MSY: [29.9934, -90.2580], ORF: [36.8976, -76.0122],
+    // Canadá
+    YYZ: [43.6777, -79.6248], YUL: [45.4706, -73.7408],
+    YVR: [49.1947, -123.1792], YYC: [51.1214, -114.0137],
+    // Europa
+    LHR: [51.4775, -0.4614], LGW: [51.1481, -0.1903],
+    STN: [51.8850,  0.2350], CDG: [49.0097,  2.5479],
+    ORY: [48.7262,  2.3652], FRA: [50.0379,  8.5622],
+    MUC: [48.3537, 11.7750], BER: [52.3667, 13.5033],
+    HAM: [53.6304, 10.0062], DUS: [51.2895,  6.7668],
+    FCO: [41.8003, 12.2389], MXP: [45.6306,  8.7281],
+    LIN: [45.4454,  9.2768], BCN: [41.2971,  2.0785],
+    MAD: [40.4722, -3.5608], AGP: [36.6749, -4.4991],
+    VIE: [48.1103, 16.5697], ZRH: [47.4647,  8.5492],
+    GVA: [46.2381,  6.1089], AMS: [52.3086,  4.7639],
+    BRU: [50.9014,  4.4844], LIS: [38.7813, -9.1359],
+    OPO: [41.2481, -8.6814], CPH: [55.6180, 12.6561],
+    ARN: [59.6519, 17.9186], OSL: [60.1939, 11.1004],
+    HEL: [60.3172, 24.9633], IST: [41.2592, 28.7416],
+    ATH: [37.9364, 23.9445], PRG: [50.1008, 14.2600],
+    BUD: [47.4298, 19.2611], WAW: [52.1657, 20.9671],
+    // Medio Oriente
+    DXB: [25.2532, 55.3657], AUH: [24.4330, 54.6511],
+    DOH: [25.2732, 51.6080], RUH: [24.9576, 46.6988],
+    TLV: [31.9965, 34.8873], AMM: [31.7226, 35.9932],
+    KWI: [29.2267, 47.9689], BAH: [26.2708, 50.6336],
+    // Asia
+    NRT: [35.7720, 140.3929], HND: [35.5494, 139.7798],
+    KIX: [34.4347, 135.2440], ICN: [37.4602, 126.4407],
+    PEK: [40.0799, 116.5878], PVG: [31.1443, 121.8083],
+    SHA: [31.1979, 121.3363], HKG: [22.3080, 113.9185],
+    TPE: [25.0777, 121.2326], SIN: [ 1.3644, 103.9915],
+    BKK: [13.6900, 100.7501], KUL: [ 2.7456, 101.7099],
+    CGK: [-6.1256, 106.6559], MNL: [14.5086, 121.1194],
+    DEL: [28.5562,  77.1000], BOM: [19.0896,  72.8656],
+    MAA: [12.9900,  80.1693], BLR: [13.1979,  77.7063],
+    HYD: [17.2403,  78.4294], CCU: [22.6520,  88.4463],
+    CMB: [ 7.1808,  79.8841], KTM: [27.6966,  85.3591],
+    // Oceanía
+    SYD: [-33.9399, 151.1753], MEL: [-37.6690, 144.8410],
+    BNE: [-27.3842, 153.1175], PER: [-31.9402, 115.9669],
+    ADL: [-34.9450, 138.5306], AKL: [-37.0082, 174.7917],
+    WLG: [-41.3273, 174.8050], CHC: [-43.4894, 172.5322],
+    // África
+    JNB: [-26.1392,  28.2460], CPT: [-33.9715,  18.6021],
+    CAI: [ 30.1219,  31.4056], CMN: [ 33.3675,  -7.5898],
+    NBO: [  1.3192,  36.9275], ADD: [  8.9779,  38.7993],
+    LOS: [  6.5774,   3.3213], ACC: [  5.6052,  -0.1668],
+    DKR: [ 14.7397, -17.4902],
 };
 
 function normalizeCityKey(value) {
@@ -835,21 +923,120 @@ const countryAliasToSpanish = {
 };
 
 const airportKeywordToCity = {
-    'aeroparque': 'Buenos Aires',
-    'jorge newbery': 'Buenos Aires',
-    'ezeiza': 'Buenos Aires',
-    'pistarini': 'Buenos Aires',
-    'gen mariano escobedo': 'Monterrey',
-    'mariano escobedo': 'Monterrey',
-    'benito juarez': 'Ciudad de México',
-    'internacional benito juarez': 'Ciudad de México',
+    // Argentina
+    'aeroparque': 'Buenos Aires', 'jorge newbery': 'Buenos Aires',
+    'ezeiza': 'Buenos Aires', 'pistarini': 'Buenos Aires',
+    'ingeniero ambrosio': 'Córdoba', 'taravella': 'Córdoba',
+    'el plumerillo': 'Mendoza', 'islas malvinas': 'Rosario',
+    'los cipresales': 'Rosario', 'teniente luis candelaria': 'Bariloche',
+    'malvinas argentinas': 'Ushuaia',
+    // Uruguay / Chile
+    'carrasco': 'Montevideo', 'arturo merino benitez': 'Santiago',
+    'comodoro arturo merino': 'Santiago',
+    // México
+    'gen mariano escobedo': 'Monterrey', 'mariano escobedo': 'Monterrey',
+    'benito juarez': 'Ciudad de México', 'internacional benito juarez': 'Ciudad de México',
     'mexico city international': 'Ciudad de México',
-    'arturo merino benitez': 'Santiago',
-    'carrasco': 'Montevideo',
-    'scl': 'Santiago',
-    'mvd': 'Montevideo',
-    'aep': 'Buenos Aires',
-    'eze': 'Buenos Aires'
+    'don miguel hidalgo': 'Guadalajara', 'hidalgo y costilla': 'Guadalajara',
+    'cancun': 'Cancún', 'cancún': 'Cancún',
+    // USA
+    'john f kennedy': 'Nueva York', 'john f. kennedy': 'Nueva York',
+    'laguardia': 'Nueva York', 'la guardia': 'Nueva York',
+    'newark': 'Nueva York',
+    'heathrow': 'Londres', 'gatwick': 'Londres', 'stansted': 'Londres',
+    'o\'hare': 'Chicago', 'ohare': 'Chicago', "o'hare": 'Chicago',
+    'midway': 'Chicago',
+    'hartsfield': 'Atlanta', 'hartsfield-jackson': 'Atlanta',
+    'dallas fort worth': 'Dallas', 'dallas/fort worth': 'Dallas',
+    'love field': 'Dallas',
+    'los angeles international': 'Los Ángeles', 'lax': 'Los Ángeles',
+    'san francisco international': 'San Francisco',
+    'seattle tacoma': 'Seattle', 'seatac': 'Seattle',
+    'denver international': 'Denver',
+    'mccarran': 'Las Vegas', 'harry reid': 'Las Vegas', 'las vegas': 'Las Vegas',
+    'logan': 'Boston',
+    'miami international': 'Miami',
+    'dulles': 'Washington', 'reagan': 'Washington', 'ronald reagan': 'Washington',
+    'george bush intercontinental': 'Houston', 'hobby': 'Houston',
+    'orlando international': 'Orlando',
+    // Canadá
+    'pearson': 'Toronto', 'pierre elliott trudeau': 'Montreal',
+    'vancouver international': 'Vancouver',
+    // Europa
+    'charles de gaulle': 'París', 'de gaulle': 'París', 'roissy': 'París',
+    'orly': 'París',
+    'schiphol': 'Ámsterdam',
+    'fiumicino': 'Roma', 'leonardo da vinci': 'Roma', 'ciampino': 'Roma',
+    'malpensa': 'Milán', 'linate': 'Milán',
+    'barajas': 'Madrid', 'adolfo suarez': 'Madrid', 'adolfo suárez': 'Madrid',
+    'el prat': 'Barcelona',
+    'humberto delgado': 'Lisboa', 'portela': 'Lisboa',
+    'francisco sa carneiro': 'Porto',
+    'frankfurt': 'Fráncfort', 'fraport': 'Fráncfort',
+    'munich': 'Múnich', 'münchen': 'Múnich',
+    'berlin': 'Berlín', 'tegel': 'Berlín', 'schonefeld': 'Berlín', 'schönefeld': 'Berlín',
+    'schwechat': 'Viena',
+    'zurich': 'Zúrich', 'zürich': 'Zúrich', 'kloten': 'Zúrich',
+    'cointrin': 'Ginebra',
+    'zaventem': 'Bruselas',
+    'kastrup': 'Copenhague',
+    'arlanda': 'Estocolmo',
+    'gardermoen': 'Oslo',
+    'vantaa': 'Helsinki',
+    'istanbul': 'Estambul', 'ataturk': 'Estambul', 'sabiha': 'Estambul',
+    'eleftherios venizelos': 'Atenas',
+    'ruzyne': 'Praga', 'vaclav havel': 'Praga',
+    'liszt': 'Budapest', 'ferihegy': 'Budapest',
+    'chopin': 'Varsovia',
+    // Oriente Medio
+    'dubai': 'Dubái', 'al maktoum': 'Dubái',
+    'abu dhabi': 'Abu Dabi', 'zayed': 'Abu Dabi',
+    'hamad': 'Doha',
+    'king khalid': 'Riad',
+    'ben gurion': 'Tel Aviv',
+    // Brasil
+    'guarulhos': 'São Paulo', 'cumbica': 'São Paulo', 'sao paulo international': 'São Paulo',
+    'congonhas': 'São Paulo',
+    'galeao': 'Río de Janeiro', 'galeão': 'Río de Janeiro', 'antonio carlos jobim': 'Río de Janeiro',
+    'santos dumont': 'Río de Janeiro',
+    'tancredo neves': 'Belo Horizonte', 'confins': 'Belo Horizonte',
+    'luis eduardo magalhaes': 'Salvador',
+    'pinto martins': 'Fortaleza',
+    'guararapes': 'Recife',
+    'salgado filho': 'Porto Alegre',
+    'afonso pena': 'Curitiba',
+    'juscelino kubitschek': 'Brasilia',
+    // Colombia / Perú
+    'el dorado': 'Bogotá',
+    'jose maria cordova': 'Medellín', 'rionegro': 'Medellín',
+    'jorge chavez': 'Lima',
+    'alejandro velasco astete': 'Cuzco',
+    // Ecuador
+    'mariscal sucre': 'Quito',
+    'jose joaquin de olmedo': 'Guayaquil',
+    // Asia
+    'narita': 'Tokio', 'haneda': 'Tokio', 'tokyo': 'Tokio',
+    'incheon': 'Seúl', 'gimpo': 'Seúl',
+    'pudong': 'Shanghái', 'hongqiao': 'Shanghái',
+    'capital airport': 'Pekín', 'daxing': 'Pekín',
+    'changi': 'Singapur',
+    'suvarnabhumi': 'Bangkok', 'don mueang': 'Bangkok',
+    'kuala lumpur international': 'Kuala Lumpur', 'klia': 'Kuala Lumpur',
+    'soekarno': 'Yakarta', 'hatta': 'Yakarta',
+    'indira gandhi': 'Delhi',
+    'chhatrapati shivaji': 'Bombay', 'chatrapati': 'Bombay',
+    'kingsford smith': 'Sídney',
+    'tullamarine': 'Melbourne',
+    // Oceanía
+    'sydney': 'Sídney',
+    'melbourne airport': 'Melbourne',
+    // África
+    'or tambo': 'Johannesburgo', 'tambo': 'Johannesburgo',
+    'cape town': 'Ciudad del Cabo',
+    'jomo kenyatta': 'Nairobi',
+    'bole': 'Addis Abeba',
+    // IATA codes como palabras clave (fallback)
+    'scl': 'Santiago', 'mvd': 'Montevideo', 'aep': 'Buenos Aires', 'eze': 'Buenos Aires',
 };
 
 function normalizeText(value) {
@@ -1937,6 +2124,23 @@ function setupDatabaseManager() {
             }
         }
     });
+
+    // Exponer globalmente para que los botones del mapa puedan abrir y desplazarse al vuelo.
+    window.openFlightEdit = (flightId) => {
+        map?.closePopup();
+        openModal();
+        setTimeout(() => {
+            const saveBtn = document.querySelector(`button[data-action="save"][data-id="${flightId}"]`);
+            if (saveBtn) {
+                const row = saveBtn.closest('tr');
+                if (row) {
+                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    row.style.outline = '2px solid #0A84FF';
+                    setTimeout(() => { row.style.outline = ''; }, 2500);
+                }
+            }
+        }, 250);
+    };
 }
 
 function renderDatabaseTable(flights) {
@@ -2599,6 +2803,7 @@ function renderMap(flights, highlightedFlight = null) {
                 <hr style="border: none; border-top: 1px solid #343434; margin: 10px 0;">
                 <div style="max-height: 200px; overflow-y: auto; font-size: 12px;">
                     ${airlineFlights.map(f => `<div style="padding: 5px 0; border-bottom: 1px solid #2a2a2a; color: #ebebeb;">
+                        ${f.id && !f.id.startsWith('demo-') ? `<button onclick="event.stopPropagation(); window.openFlightEdit('${f.id}')" style="float:right; background:transparent; border:1px solid #555; border-radius:4px; color:#aaa; cursor:pointer; font-size:11px; padding:1px 6px; margin-left:8px;">✏️</button>` : ''}
                         <strong>${f.flightNumber}</strong> ${f.origin || 'Buenos Aires'} → ${getCountryFlag(f.country)} ${f.destination}<br>
                         <small style="color: #a3a3a3;">${f.date} - ${f.distance} km - ${formatDuration(f.durationHours)} - ${getCategoryBadge(f.category)} - ${renderRatingStars(f.rating)}</small>
                     </div>`).join('')}
@@ -2719,6 +2924,7 @@ function renderMap(flights, highlightedFlight = null) {
                         <hr style="border: none; border-top: 1px solid #343434; margin: 10px 0;">
                         <div style="font-weight: 600; margin-bottom: 8px; color: #e7e7e7;">Todos los vuelos:</div>
                         ${Object.values(airlines).flat().map(f => `<div style="padding: 5px 0; border-bottom: 1px solid #2a2a2a; color: #d4d4d4;">
+                            ${f.id && !f.id.startsWith('demo-') ? `<button onclick="event.stopPropagation(); window.openFlightEdit('${f.id}')" style="float:right; background:transparent; border:1px solid #555; border-radius:4px; color:#aaa; cursor:pointer; font-size:11px; padding:1px 6px; margin-left:8px;">✏️</button>` : ''}
                             <strong style="color: ${airlineColors[f.flightNumber.substring(0, 2).toUpperCase()] || '#0A84FF'};">${f.flightNumber}</strong> desde ${f.origin || 'Buenos Aires'} - ${f.date} - ${f.distance} km - ${formatDuration(f.durationHours)} - ${getCategoryBadge(f.category)} - ${renderRatingStars(f.rating)}
                         </div>`).join('')}
                     </div>
