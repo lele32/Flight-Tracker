@@ -61,6 +61,58 @@ const FLIGHT_LOOKUP_PROXY_URL_DEFAULT = 'https://flight-tracker-deploy.vercel.ap
 const FLIGHTS_CACHE_KEY = 'flightTracker_cached_flights_v1';
 let isLiveLookupAvailable = true;
 
+const cityCoordinates = {
+    // America
+    'Buenos Aires': [-34.6037, -58.3816],
+    'Montevideo': [-34.9011, -56.1645],
+    'Santiago': [-33.4489, -70.6693],
+    'Ciudad de Mexico': [19.4326, -99.1332],
+    'Monterrey': [25.6866, -100.3161],
+    'Nueva York': [40.7128, -74.0060],
+    'Miami': [25.7617, -80.1918],
+    'Chicago': [41.8781, -87.6298],
+    'Los Angeles': [34.0522, -118.2437],
+    // Europe
+    'Londres': [51.5074, -0.1278],
+    'Manchester': [53.4808, -2.2426],
+    'Paris': [48.8566, 2.3522],
+    'Lyon': [45.7640, 4.8357],
+    'Roma': [41.9028, 12.4964],
+    'Madrid': [40.4168, -3.7038],
+    'Barcelona': [41.3851, 2.1734],
+    'Berlin': [52.52, 13.405],
+    'Munich': [48.1351, 11.582],
+    'Francfort': [50.1109, 8.6821],
+    'Amsterdam': [52.3676, 4.9041],
+    // Asia / Oceania
+    'Tokio': [35.6762, 139.6503],
+    'Osaka': [34.6937, 135.5023],
+    'Sidney': [-33.8688, 151.2093],
+    'Melbourne': [-37.8136, 144.9631]
+};
+
+function normalizeCityKey(value) {
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\./g, '')
+        .trim()
+        .toLowerCase();
+}
+
+function getCityCoordinates(cityName) {
+    const direct = cityCoordinates[cityName];
+    if (direct) return direct;
+
+    const targetKey = normalizeCityKey(cityName);
+    for (const [name, coords] of Object.entries(cityCoordinates)) {
+        if (normalizeCityKey(name) === targetKey) {
+            return coords;
+        }
+    }
+    return null;
+}
+
 const demoFallbackFlights = [
     { origin: 'Buenos Aires', destination: 'Montevideo', distance: 230, date: '2026-01-12', country: 'Uruguay', flightNumber: 'AR1388', category: 'Personal', rating: 5, durationHours: 1.2 },
     { origin: 'Buenos Aires', destination: 'Santiago', distance: 1130, date: '2026-01-25', country: 'Chile', flightNumber: 'LA8000', category: 'Personal', rating: 4, durationHours: 2.3 },
@@ -1488,34 +1540,9 @@ function stopAnimationMode(completed) {
 function animateFlight(flight, sourceFlights, callback) {
     if (!map) return callback();
 
-    // Coordenadas de ciudades
-    const cityCoords = {
-        'Nueva York': [40.7128, -74.0060],
-        'Miami': [25.7617, -80.1918],
-        'Chicago': [41.8781, -87.6298],
-        'Los Ángeles': [34.0522, -118.2437],
-        'México': [19.4326, -99.1332],
-        'Londres': [51.5074, -0.1278],
-        'Manchester': [53.4808, -2.2426],
-        'París': [48.8566, 2.3522],
-        'Lyon': [45.7640, 4.8357],
-        'Tokio': [35.6762, 139.6503],
-        'Osaka': [34.6937, 135.5023],
-        'Sídney': [-33.8688, 151.2093],
-        'Melbourne': [-37.8136, 144.9631],
-        'Roma': [41.9028, 12.4964],
-        'Madrid': [40.4168, -3.7038],
-        'Barcelona': [41.3851, 2.1734],
-        'Berlín': [52.5200, 13.4050],
-        'Múnich': [48.1351, 11.5820],
-        'Fráncfort': [50.1109, 8.6821],
-        'Ámsterdam': [52.3676, 4.9041],
-        'Buenos Aires': [-34.6037, -58.3816]
-    };
-
     const origin = flight.origin || 'Buenos Aires';
-    const originCoords = cityCoords[origin];
-    const destCoords = cityCoords[flight.destination];
+    const originCoords = getCityCoordinates(origin);
+    const destCoords = getCityCoordinates(flight.destination);
 
     if (!destCoords || !originCoords) {
         renderMap(sourceFlights);
@@ -2385,31 +2412,6 @@ function renderMap(flights, highlightedFlight = null) {
     flightLines.forEach(line => map.removeLayer(line));
     flightLines = [];
 
-    // Coordenadas de ciudades
-    const cityCoords = {
-        'Nueva York': [40.7128, -74.0060],
-        'Miami': [25.7617, -80.1918],
-        'Chicago': [41.8781, -87.6298],
-        'Los Ángeles': [34.0522, -118.2437],
-        'México': [19.4326, -99.1332],
-        'Londres': [51.5074, -0.1278],
-        'Manchester': [53.4808, -2.2426],
-        'París': [48.8566, 2.3522],
-        'Lyon': [45.7640, 4.8357],
-        'Tokio': [35.6762, 139.6503],
-        'Osaka': [34.6937, 135.5023],
-        'Sídney': [-33.8688, 151.2093],
-        'Melbourne': [-37.8136, 144.9631],
-        'Roma': [41.9028, 12.4964],
-        'Madrid': [40.4168, -3.7038],
-        'Barcelona': [41.3851, 2.1734],
-        'Berlín': [52.5200, 13.4050],
-        'Múnich': [48.1351, 11.5820],
-        'Fráncfort': [50.1109, 8.6821],
-        'Ámsterdam': [52.3676, 4.9041],
-        'Buenos Aires': [-34.6037, -58.3816]
-    };
-
     // Filtrar vuelos que tengan flightNumber
     const validFlights = flights.filter(f => f.flightNumber);
 
@@ -2431,7 +2433,7 @@ function renderMap(flights, highlightedFlight = null) {
 
     // Crear marcadores para cada combinación origen-aerolínea
     Object.values(flightsByOriginAirline).forEach(({ origin, airlineCode, flights: airlineFlights }) => {
-        const originCoords = cityCoords[origin];
+        const originCoords = getCityCoordinates(origin);
         if (!originCoords) return;
 
         const airlineColor = airlineColors[airlineCode] || '#0A84FF';
@@ -2496,8 +2498,8 @@ function renderMap(flights, highlightedFlight = null) {
 
     // Crear líneas punteadas por ruta
     Object.values(flightRoutes).forEach((route) => {
-        const originCoords = cityCoords[route.origin];
-        const destCoords = cityCoords[route.destination];
+        const originCoords = getCityCoordinates(route.origin);
+        const destCoords = getCityCoordinates(route.destination);
         if (destCoords && originCoords) {
             const airlineColor = airlineColors[route.airline] || '#0A84FF';
             const routeIntensity = route.flights.length;
@@ -2532,7 +2534,7 @@ function renderMap(flights, highlightedFlight = null) {
 
     // Crear marcadores de destino
     Object.entries(flightsByDestination).forEach(([destination, airlines]) => {
-        const destCoords = cityCoords[destination];
+        const destCoords = getCityCoordinates(destination);
         if (destCoords) {
             // Obtener el primer airline para el color del marcador
             const airlineCodes = Object.keys(airlines);
@@ -2592,8 +2594,8 @@ function renderMap(flights, highlightedFlight = null) {
 
     if (highlightedFlight?.destination && highlightedFlight?.origin) {
         const origin = highlightedFlight.origin || 'Buenos Aires';
-        const originCoords = cityCoords[origin];
-        const destCoords = cityCoords[highlightedFlight.destination];
+        const originCoords = getCityCoordinates(origin);
+        const destCoords = getCityCoordinates(highlightedFlight.destination);
         
         if (destCoords && originCoords) {
             const airlineCode = (highlightedFlight.flightNumber || '').substring(0, 2).toUpperCase();
