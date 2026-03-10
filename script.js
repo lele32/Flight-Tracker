@@ -66,28 +66,39 @@ const cityCoordinates = {
     'Buenos Aires': [-34.6037, -58.3816],
     'Montevideo': [-34.9011, -56.1645],
     'Santiago': [-33.4489, -70.6693],
+    'Santiago de Chile': [-33.4489, -70.6693],
+    'Mexico': [19.4326, -99.1332],
+    'México': [19.4326, -99.1332],
     'Ciudad de Mexico': [19.4326, -99.1332],
+    'Ciudad de México': [19.4326, -99.1332],
     'Monterrey': [25.6866, -100.3161],
     'Nueva York': [40.7128, -74.0060],
     'Miami': [25.7617, -80.1918],
     'Chicago': [41.8781, -87.6298],
     'Los Angeles': [34.0522, -118.2437],
+    'Los Ángeles': [34.0522, -118.2437],
     // Europe
     'Londres': [51.5074, -0.1278],
     'Manchester': [53.4808, -2.2426],
     'Paris': [48.8566, 2.3522],
+    'París': [48.8566, 2.3522],
     'Lyon': [45.7640, 4.8357],
     'Roma': [41.9028, 12.4964],
     'Madrid': [40.4168, -3.7038],
     'Barcelona': [41.3851, 2.1734],
     'Berlin': [52.52, 13.405],
+    'Berlín': [52.52, 13.405],
     'Munich': [48.1351, 11.582],
+    'Múnich': [48.1351, 11.582],
     'Francfort': [50.1109, 8.6821],
+    'Fráncfort': [50.1109, 8.6821],
     'Amsterdam': [52.3676, 4.9041],
+    'Ámsterdam': [52.3676, 4.9041],
     // Asia / Oceania
     'Tokio': [35.6762, 139.6503],
     'Osaka': [34.6937, 135.5023],
     'Sidney': [-33.8688, 151.2093],
+    'Sídney': [-33.8688, 151.2093],
     'Melbourne': [-37.8136, 144.9631]
 };
 
@@ -132,28 +143,67 @@ function getAirportCoordinates(iataCode) {
     return airportCoordinates[key] || null;
 }
 
+function isValidLatLng(coords) {
+    if (!Array.isArray(coords) || coords.length !== 2) return false;
+    const lat = Number(coords[0]);
+    const lng = Number(coords[1]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+    if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return false;
+    if (lat === 0 && lng === 0) return false;
+    return true;
+}
+
+function distanceKm(a, b) {
+    if (!isValidLatLng(a) || !isValidLatLng(b)) return Number.POSITIVE_INFINITY;
+    const toRad = (deg) => (deg * Math.PI) / 180;
+    const [lat1, lon1] = a;
+    const [lat2, lon2] = b;
+    const R = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+    return R * c;
+}
+
+function resolveCoords({ storedLat, storedLng, iataCode, cityName, fallbackCityName }) {
+    const byIata = getAirportCoordinates(iataCode);
+    if (isValidLatLng(byIata)) return byIata;
+
+    const normalizedCity = normalizeDestinationCity(cityName || fallbackCityName || '');
+    const byCity = getCityCoordinates(normalizedCity);
+
+    const stored = [Number(storedLat), Number(storedLng)];
+    const hasStored = isValidLatLng(stored);
+
+    // Si tenemos ciudad fiable, usamos stored solo si es geograficamente coherente.
+    if (isValidLatLng(byCity)) {
+        if (!hasStored) return byCity;
+        return distanceKm(stored, byCity) <= 1200 ? stored : byCity;
+    }
+
+    if (hasStored) return stored;
+    return null;
+}
+
 function getFlightOriginCoords(flight) {
-    const lat = Number(flight?.originLat);
-    const lng = Number(flight?.originLng);
-    if (Number.isFinite(lat) && Number.isFinite(lng)) return [lat, lng];
-
-    const byIata = getAirportCoordinates(flight?.departureIata);
-    if (byIata) return byIata;
-
-    const normalizedOrigin = normalizeOriginCity(flight?.origin || 'Buenos Aires');
-    return getCityCoordinates(normalizedOrigin);
+    return resolveCoords({
+        storedLat: flight?.originLat,
+        storedLng: flight?.originLng,
+        iataCode: flight?.departureIata,
+        cityName: normalizeOriginCity(flight?.origin || 'Buenos Aires'),
+        fallbackCityName: 'Buenos Aires'
+    });
 }
 
 function getFlightDestinationCoords(flight) {
-    const lat = Number(flight?.destinationLat);
-    const lng = Number(flight?.destinationLng);
-    if (Number.isFinite(lat) && Number.isFinite(lng)) return [lat, lng];
-
-    const byIata = getAirportCoordinates(flight?.arrivalIata);
-    if (byIata) return byIata;
-
-    const normalizedDestination = normalizeDestinationCity(flight?.destination || 'Desconocido');
-    return getCityCoordinates(normalizedDestination);
+    return resolveCoords({
+        storedLat: flight?.destinationLat,
+        storedLng: flight?.destinationLng,
+        iataCode: flight?.arrivalIata,
+        cityName: normalizeDestinationCity(flight?.destination || 'Desconocido'),
+        fallbackCityName: 'Desconocido'
+    });
 }
 
 const demoFallbackFlights = [
