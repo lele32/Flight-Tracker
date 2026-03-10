@@ -1,9 +1,5 @@
 const API_KEY = process.env.AVIATIONSTACK_API_KEY;
 
-if (!API_KEY) {
-    throw new Error('AVIATIONSTACK_API_KEY no configurada');
-}
-
 function haversineDistanceKm(lat1, lon1, lat2, lon2) {
     const toRad = (deg) => (deg * Math.PI) / 180;
     const R = 6371;
@@ -76,6 +72,11 @@ module.exports = async (req, res) => {
 
     if (req.method !== 'GET') {
         res.status(405).json({ error: 'method-not-allowed' });
+        return;
+    }
+
+    if (!API_KEY) {
+        res.status(500).json({ error: 'api-key-not-configured' });
         return;
     }
 
