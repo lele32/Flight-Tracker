@@ -901,7 +901,7 @@ const flightDatabase = {
     }},
     // Avianca
     'AV': { airline: 'Avianca', routes: {
-        '72': { origin: 'Bogotá', destination: 'Madrid', distance: 8020, country: 'España' },
+        '72': { origin: 'Bogotá', destination: 'Ciudad de México', distance: 3160, country: 'México' },
         '218': { origin: 'Buenos Aires', destination: 'Bogotá', distance: 4680, country: 'Colombia' },
         '87': { origin: 'Bogotá', destination: 'Buenos Aires', distance: 4680, country: 'Argentina' }
     }},
