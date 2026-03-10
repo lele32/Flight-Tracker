@@ -57,7 +57,7 @@ let currentUser = null;
 const googleProvider = new GoogleAuthProvider();
 let openAuthModal = () => {};
 const FLIGHT_LOOKUP_PROXY_URL_STORAGE = 'flightTracker_lookup_proxy_url';
-const FLIGHT_LOOKUP_PROXY_URL_DEFAULT = 'https://flight-tracker-zeta-tawny.vercel.app/api/lookupFlight';
+const FLIGHT_LOOKUP_PROXY_URL_DEFAULT = 'https://flight-tracker-deploy.vercel.app/api/lookupFlight';
 let isLiveLookupAvailable = true;
 
 function validatePasswordStrength(password) {
