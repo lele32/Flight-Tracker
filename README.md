@@ -2,6 +2,13 @@
 
 Una aplicación web simple para rastrear y visualizar información de vuelos usando HTML, CSS, JavaScript y Firebase.
 
+## Flujo de Deploy (Actual)
+
+- `git push` a `main` despliega en **Vercel** (si el repo está conectado en Vercel).
+- **Firebase no es un paso intermedio** del deploy web/API.
+- Firebase se usa para **Auth + Firestore**.
+- `functions/` queda como implementación opcional para futuro (requiere plan Blaze para deploy).
+
 ## Características
 
 - **Selector de Período**: Filtra todos los KPIs (Kilómetros, Destinos, Países) por período: Total, Último Mes, Últimos 3 Meses, Último Año.
@@ -23,6 +30,11 @@ Una aplicación web simple para rastrear y visualizar información de vuelos usa
 3. Obtén las claves de configuración de Firebase.
 4. Reemplaza los placeholders en `index.html` con tus claves reales (ya están configuradas en el código actual).
 5. Asegúrate de que Firestore tenga reglas que permitan lecturas y escrituras (por defecto en modo de prueba).
+
+## API de Lookup (Producción)
+
+- Endpoint activo: `https://flight-tracker-deploy.vercel.app/api/lookupFlight`
+- Configuración de API key: variable de entorno `AVIATIONSTACK_API_KEY` en Vercel.
 
 ## Vuelos Disponibles
 

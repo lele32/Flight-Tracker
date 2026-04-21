@@ -1,5 +1,12 @@
 # Solución: Error de Auto-Deploy en Vercel
 
+## Estado Actual Recomendado
+
+- Producción corre en Vercel (`api/lookupFlight.js`).
+- `git push` a `main` despliega en Vercel si Git Integration está activa.
+- Firebase se usa para Auth/Firestore (no como paso intermedio de deploy).
+- Firebase Functions queda opcional; en plan Spark puede fallar el deploy por APIs de build no habilitables.
+
 ## 🔴 Problema
 ```
 Error: Cannot read properties of undefined (reading 'fsPath')

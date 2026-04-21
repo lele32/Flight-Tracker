@@ -1,5 +1,12 @@
 # Flight Tracker API - Configuración y Mejoras
 
+## Estado de Arquitectura (Actual)
+
+- Producción API: `api/lookupFlight.js` en Vercel.
+- Flujo de deploy: `git push` a `main` -> Vercel auto-deploy.
+- Firebase se usa para Auth/Firestore.
+- `functions/lookupFlight` en Firebase es opcional y actualmente no forma parte del flujo (en plan Spark no se puede desplegar Functions v2 con build APIs).
+
 ## 🚀 Auto-Deployment desde GitHub
 
 ### Configuración en Vercel (Web UI)
@@ -133,7 +140,7 @@ Access-Control-Allow-Origin: [origen permitido]
 
 ### Configuradas en Vercel
 ```
-AVIATIONSTACK_API_KEY=737c0c899deb095b6fa805974f9c2b7b
+AVIATIONSTACK_API_KEY=TU_API_KEY_AQUI
 ```
 
 ### Agregar/Editar
