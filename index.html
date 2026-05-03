@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <div id="toast-region" aria-live="polite" aria-atomic="true"></div>
+
     <div id="account-panel" aria-live="polite">
         <button id="open-auth-modal" type="button">Iniciar sesión</button>
         <div id="account-user" class="auth-hidden">
@@ -175,6 +177,7 @@
             <form id="flight-form">
                 <label for="flight-number">Número de Vuelo (ej: AM190):</label>
                 <input type="text" id="flight-number" placeholder="AM190" maxlength="6" required><br>
+                <div id="flight-lookup-status" class="lookup-status" aria-live="polite"></div>
                 <label for="category">Categoría del viaje:</label>
                 <select id="category" required>
                     <option value="Personal" selected>Personal</option>
@@ -277,6 +280,43 @@
                     <tbody id="db-table-body"></tbody>
                 </table>
             </div>
+        </div>
+    </div>
+
+    <div id="confirm-modal" class="utility-modal modal-hidden" aria-hidden="true">
+        <div id="confirm-modal-overlay" class="utility-overlay"></div>
+        <div class="utility-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+            <h2 id="confirm-title">Confirmar acción</h2>
+            <p id="confirm-message"></p>
+            <div class="utility-actions">
+                <button id="confirm-cancel" class="utility-btn secondary" type="button">Cancelar</button>
+                <button id="confirm-accept" class="utility-btn primary" type="button">Continuar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="manual-flight-modal" class="utility-modal modal-hidden" aria-hidden="true">
+        <div id="manual-flight-overlay" class="utility-overlay"></div>
+        <div class="utility-dialog" role="dialog" aria-modal="true" aria-labelledby="manual-flight-title" aria-describedby="manual-flight-description">
+            <h2 id="manual-flight-title">Cargar ruta manual</h2>
+            <p id="manual-flight-description">Completa origen y destino para calcular la distancia estimada.</p>
+            <form id="manual-flight-form" class="utility-form">
+                <label for="manual-origin">Origen</label>
+                <input id="manual-origin" type="text" autocomplete="off" required>
+
+                <label for="manual-destination">Destino</label>
+                <input id="manual-destination" type="text" autocomplete="off" required>
+
+                <label for="manual-country">País destino</label>
+                <input id="manual-country" type="text" autocomplete="off">
+
+                <p id="manual-flight-error" class="utility-error" aria-live="polite"></p>
+
+                <div class="utility-actions">
+                    <button id="manual-flight-cancel" class="utility-btn secondary" type="button">Cancelar</button>
+                    <button id="manual-flight-submit" class="utility-btn primary" type="submit">Usar ruta</button>
+                </div>
+            </form>
         </div>
     </div>
 

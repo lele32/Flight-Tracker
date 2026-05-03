@@ -29,12 +29,14 @@ Una aplicación web simple para rastrear y visualizar información de vuelos usa
 2. Habilita Firestore en tu proyecto.
 3. Obtén las claves de configuración de Firebase.
 4. Reemplaza los placeholders en `index.html` con tus claves reales (ya están configuradas en el código actual).
-5. Asegúrate de que Firestore tenga reglas que permitan lecturas y escrituras (por defecto en modo de prueba).
+5. Despliega o pega en Firebase Console las reglas de `firestore.rules`. No uses reglas en modo de prueba en producción.
 
 ## API de Lookup (Producción)
 
 - Endpoint activo: `https://flight-tracker-deploy.vercel.app/api/lookupFlight`
 - Configuración de API key: variable de entorno `AVIATIONSTACK_API_KEY` en Vercel.
+- Configuración Firebase: variable opcional `FIREBASE_PROJECT_ID` en Vercel. Si no existe, se usa `flightracker-f5493`.
+- Autenticación: requiere `Authorization: Bearer <Firebase ID token>`.
 
 ## Vuelos Disponibles
 
@@ -72,7 +74,9 @@ Cada aerolínea tiene un color único en el mapa:
 
 ## Estructura de Datos
 
-Crea una colección llamada `flights` en Firestore con documentos que tengan campos como:
+Los vuelos se guardan por usuario en `users/{uid}/flights/{flightId}`. Las reglas de `firestore.rules` solo permiten que cada usuario autenticado lea y escriba sus propios vuelos.
+
+Cada documento de vuelo usa campos como:
 - `origin`: Ciudad de origen
 - `destination`: Ciudad de destino
 - `distance`: Distancia en km (número)

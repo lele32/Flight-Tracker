@@ -1,9 +1,19 @@
+const crypto = require('crypto');
+
 const API_KEY = process.env.AVIATIONSTACK_API_KEY;
+const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'flightracker-f5493';
+const FIREBASE_CERTS_URL = 'https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com';
+const ALLOWED_ORIGINS = [
+    'https://lele32.github.io',
+    'https://flight-tracker-deploy.vercel.app',
+    'http://localhost:5500',
+    'http://127.0.0.1:5500'
+];
 
 // Rate limiting: almacén en memoria (se reinicia con cada cold start)
 const requestCounts = new Map();
 const RATE_LIMIT_WINDOW_MS = 60000; // 1 minuto
-const MAX_REQUESTS_PER_WINDOW = 30; // 30 requests por minuto por IP
+const MAX_REQUESTS_PER_WINDOW = 30; // 30 requests por minuto por identificador
 
 // Analytics: contador simple
 let requestStats = {
@@ -24,9 +34,102 @@ function log(level, message, data = {}) {
     console.log(JSON.stringify(entry));
 }
 
-function checkRateLimit(ip) {
+let firebaseCertsCache = {
+    expiresAt: 0,
+    certs: null
+};
+
+function base64UrlDecode(value) {
+    const input = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
+    const padded = input.padEnd(input.length + ((4 - (input.length % 4)) % 4), '=');
+    return Buffer.from(padded, 'base64');
+}
+
+function parseJwtPart(value) {
+    try {
+        return JSON.parse(base64UrlDecode(value).toString('utf8'));
+    } catch {
+        return null;
+    }
+}
+
+async function getFirebaseCerts() {
     const now = Date.now();
-    const clientData = requestCounts.get(ip) || { count: 0, resetTime: now + RATE_LIMIT_WINDOW_MS };
+    if (firebaseCertsCache.certs && firebaseCertsCache.expiresAt > now) {
+        return firebaseCertsCache.certs;
+    }
+
+    const response = await fetch(FIREBASE_CERTS_URL);
+    if (!response.ok) {
+        throw new Error('firebase-certs-unavailable');
+    }
+
+    const cacheControl = response.headers.get('cache-control') || '';
+    const maxAgeMatch = cacheControl.match(/max-age=(\d+)/);
+    const maxAgeSeconds = maxAgeMatch ? Number(maxAgeMatch[1]) : 3600;
+    const certs = await response.json();
+
+    firebaseCertsCache = {
+        certs,
+        expiresAt: now + Math.max(60, maxAgeSeconds - 60) * 1000
+    };
+    return certs;
+}
+
+async function verifyFirebaseIdToken(idToken) {
+    const parts = String(idToken || '').split('.');
+    if (parts.length !== 3) return null;
+
+    const [encodedHeader, encodedPayload, encodedSignature] = parts;
+    const header = parseJwtPart(encodedHeader);
+    const payload = parseJwtPart(encodedPayload);
+    if (!header || !payload || header.alg !== 'RS256' || !header.kid) return null;
+
+    const certs = await getFirebaseCerts();
+    const cert = certs?.[header.kid];
+    if (!cert) return null;
+
+    const verifier = crypto.createVerify('RSA-SHA256');
+    verifier.update(`${encodedHeader}.${encodedPayload}`);
+    verifier.end();
+
+    const signature = base64UrlDecode(encodedSignature);
+    const isSignatureValid = verifier.verify(cert, signature);
+    if (!isSignatureValid) return null;
+
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const expectedIssuer = `https://securetoken.google.com/${FIREBASE_PROJECT_ID}`;
+    if (payload.aud !== FIREBASE_PROJECT_ID) return null;
+    if (payload.iss !== expectedIssuer) return null;
+    if (!payload.sub || typeof payload.sub !== 'string') return null;
+    if (payload.sub.length > 128) return null;
+    if (typeof payload.exp !== 'number' || payload.exp <= nowSeconds) return null;
+    if (typeof payload.iat !== 'number' || payload.iat > nowSeconds + 300) return null;
+
+    return {
+        uid: payload.sub,
+        email: payload.email || null
+    };
+}
+
+async function verifyFirebaseUser(req) {
+    const authHeader = req.headers.authorization || '';
+    if (!authHeader.startsWith('Bearer ')) return null;
+
+    const idToken = authHeader.replace('Bearer ', '').trim();
+    if (!idToken) return null;
+
+    try {
+        return await verifyFirebaseIdToken(idToken);
+    } catch (error) {
+        log('error', 'Firebase token verification failed', { error: error.message });
+        return null;
+    }
+}
+
+function checkRateLimit(identifier) {
+    const now = Date.now();
+    const clientData = requestCounts.get(identifier) || { count: 0, resetTime: now + RATE_LIMIT_WINDOW_MS };
     
     // Resetear contador si la ventana expiró
     if (now >= clientData.resetTime) {
@@ -35,7 +138,7 @@ function checkRateLimit(ip) {
     }
     
     clientData.count++;
-    requestCounts.set(ip, clientData);
+    requestCounts.set(identifier, clientData);
     
     const isLimited = clientData.count > MAX_REQUESTS_PER_WINDOW;
     const remaining = Math.max(0, MAX_REQUESTS_PER_WINDOW - clientData.count);
@@ -64,17 +167,23 @@ function haversineDistanceKm(lat1, lon1, lat2, lon2) {
     return Math.round(R * c);
 }
 
-function setCors(res, rateLimitInfo = {}) {
-    const allowedOrigins = [
-        'https://lele32.github.io',
-        'https://flight-tracker-deploy.vercel.app',
-        'http://localhost:5500',
-        'http://127.0.0.1:5500'
-    ];
-    
-    const origin = res.req?.headers?.origin || '';
-    if (allowedOrigins.some(allowed => origin.startsWith(allowed))) {
+function isOriginAllowed(req) {
+    const origin = req.headers.origin || '';
+    return !origin || ALLOWED_ORIGINS.includes(origin);
+}
+
+function setRateLimitHeaders(res, rateLimitInfo = {}) {
+    if (rateLimitInfo.remaining === undefined) return;
+    res.setHeader('X-RateLimit-Limit', MAX_REQUESTS_PER_WINDOW);
+    res.setHeader('X-RateLimit-Remaining', rateLimitInfo.remaining);
+    res.setHeader('X-RateLimit-Reset', rateLimitInfo.resetIn);
+}
+
+function setCors(req, res, rateLimitInfo = {}) {
+    const origin = req.headers.origin || '';
+    if (ALLOWED_ORIGINS.includes(origin)) {
         res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Vary', 'Origin');
     }
     
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
@@ -82,13 +191,7 @@ function setCors(res, rateLimitInfo = {}) {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('X-XSS-Protection', '1; mode=block');
-    
-    // Rate limiting headers
-    if (rateLimitInfo.remaining !== undefined) {
-        res.setHeader('X-RateLimit-Limit', MAX_REQUESTS_PER_WINDOW);
-        res.setHeader('X-RateLimit-Remaining', rateLimitInfo.remaining);
-        res.setHeader('X-RateLimit-Reset', rateLimitInfo.resetIn);
-    }
+    setRateLimitHeaders(res, rateLimitInfo);
 }
 
 function pickFlightCandidate(items) {
@@ -137,9 +240,14 @@ module.exports = async (req, res) => {
         userAgent: req.headers['user-agent']
     });
 
-    // Rate limiting check
-    const rateLimitInfo = checkRateLimit(clientIP);
-    setCors(res, rateLimitInfo);
+    setCors(req, res);
+
+    if (!isOriginAllowed(req)) {
+        log('warn', 'Origin not allowed', { origin: req.headers.origin, ip: clientIP });
+        requestStats.errors++;
+        res.status(403).json({ error: 'origin-not-allowed' });
+        return;
+    }
 
     if (req.method === 'OPTIONS') {
         res.status(204).end();
@@ -152,24 +260,51 @@ module.exports = async (req, res) => {
         return;
     }
 
-    // Rate limiting enforcement
-    if (rateLimitInfo.isLimited) {
+    const anonymousRateLimitInfo = checkRateLimit(`anonymous:${clientIP}`);
+    setRateLimitHeaders(res, anonymousRateLimitInfo);
+    if (anonymousRateLimitInfo.isLimited) {
         log('warn', 'Rate limit exceeded', { 
             ip: clientIP, 
-            count: rateLimitInfo.count,
+            count: anonymousRateLimitInfo.count,
             flightNumber 
         });
         requestStats.errors++;
         res.status(429).json({ 
             error: 'rate-limit-exceeded',
             message: 'Demasiadas solicitudes. Intenta de nuevo más tarde.',
-            retryAfter: rateLimitInfo.resetIn
+            retryAfter: anonymousRateLimitInfo.resetIn
+        });
+        return;
+    }
+
+    const user = await verifyFirebaseUser(req);
+    if (!user) {
+        log('warn', 'Unauthenticated request', { ip: clientIP, flightNumber });
+        requestStats.errors++;
+        res.status(401).json({ error: 'unauthenticated' });
+        return;
+    }
+
+    const userRateLimitInfo = checkRateLimit(`user:${user.uid}:${clientIP}`);
+    setRateLimitHeaders(res, userRateLimitInfo);
+    if (userRateLimitInfo.isLimited) {
+        log('warn', 'User rate limit exceeded', {
+            uid: user.uid,
+            ip: clientIP,
+            count: userRateLimitInfo.count,
+            flightNumber
+        });
+        requestStats.errors++;
+        res.status(429).json({
+            error: 'rate-limit-exceeded',
+            message: 'Demasiadas solicitudes. Intenta de nuevo más tarde.',
+            retryAfter: userRateLimitInfo.resetIn
         });
         return;
     }
 
     if (!API_KEY) {
-        log('error', 'API key not configured', { ip: clientIP });
+        log('error', 'API key not configured', { ip: clientIP, uid: user.uid });
         requestStats.errors++;
         res.status(500).json({ error: 'api-key-not-configured' });
         return;
@@ -178,21 +313,21 @@ module.exports = async (req, res) => {
     const flightNumberRaw = String(req.query.flightNumber || '').trim().toUpperCase();
     
     if (!flightNumberRaw || flightNumberRaw.length < 2 || flightNumberRaw.length > 10) {
-        log('warn', 'Invalid flight number length', { flightNumber: flightNumberRaw, ip: clientIP });
+        log('warn', 'Invalid flight number length', { flightNumber: flightNumberRaw, ip: clientIP, uid: user.uid });
         requestStats.errors++;
         res.status(400).json({ error: 'invalid-flight-number-length' });
         return;
     }
     
     if (!/^[A-Z0-9-]+$/.test(flightNumberRaw)) {
-        log('warn', 'Invalid flight number format', { flightNumber: flightNumberRaw, ip: clientIP });
+        log('warn', 'Invalid flight number format', { flightNumber: flightNumberRaw, ip: clientIP, uid: user.uid });
         requestStats.errors++;
         res.status(400).json({ error: 'invalid-flight-number-format' });
         return;
     }
 
     try {
-        log('info', 'Looking up flight', { flightNumber: flightNumberRaw, ip: clientIP });
+        log('info', 'Looking up flight', { flightNumber: flightNumberRaw, ip: clientIP, uid: user.uid });
         
         const compact = flightNumberRaw.replace(/\s+/g, '').replace(/-/g, '');
         const match = compact.match(/^([A-Z]{2,3})(\d{1,4})$/);

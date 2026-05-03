@@ -605,9 +605,212 @@ function normalizeFlightPayload(flight) {
 function ensureAuthenticated() {
     if (!currentUser) {
         openAuthModal();
+        showToast('Inicia sesión para continuar.', 'info');
         return false;
     }
     return true;
+}
+
+function showToast(message, type = 'info', duration = 3600) {
+    const region = document.getElementById('toast-region');
+    if (!region) return;
+
+    const toast = document.createElement('div');
+    const normalizedType = ['success', 'error', 'info'].includes(type) ? type : 'info';
+    toast.className = `toast toast-${normalizedType}`;
+    toast.setAttribute('role', normalizedType === 'error' ? 'alert' : 'status');
+
+    const messageEl = document.createElement('p');
+    messageEl.className = 'toast-message';
+    messageEl.textContent = message;
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'toast-close';
+    closeBtn.type = 'button';
+    closeBtn.setAttribute('aria-label', 'Cerrar notificación');
+    closeBtn.textContent = 'x';
+
+    const dismiss = () => {
+        if (toast.classList.contains('is-hiding')) return;
+        toast.classList.add('is-hiding');
+        window.setTimeout(() => toast.remove(), 180);
+    };
+
+    closeBtn.addEventListener('click', dismiss);
+    toast.append(messageEl, closeBtn);
+    region.appendChild(toast);
+
+    if (duration > 0) {
+        window.setTimeout(dismiss, duration);
+    }
+}
+
+function setButtonBusy(button, isBusy, busyText = 'Procesando...') {
+    if (!button) return;
+    if (!button.dataset.defaultText) {
+        button.dataset.defaultText = button.textContent;
+    }
+    button.disabled = Boolean(isBusy);
+    button.classList.toggle('is-busy', Boolean(isBusy));
+    button.textContent = isBusy ? busyText : button.dataset.defaultText;
+}
+
+function trapModalFocus(event, modal) {
+    if (event.key !== 'Tab' || !modal?.classList.contains('modal-visible')) return;
+
+    const focusableSelectors = [
+        'a[href]',
+        'button:not([disabled])',
+        'input:not([disabled])',
+        'select:not([disabled])',
+        'textarea:not([disabled])',
+        '[tabindex]:not([tabindex="-1"])'
+    ].join(',');
+    const focusable = Array.from(modal.querySelectorAll(focusableSelectors))
+        .filter((element) => element.offsetParent !== null);
+
+    if (!focusable.length) {
+        event.preventDefault();
+        return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const activeElement = document.activeElement;
+
+    if (!modal.contains(activeElement)) {
+        event.preventDefault();
+        first.focus();
+        return;
+    }
+
+    if (event.shiftKey && activeElement === first) {
+        event.preventDefault();
+        last.focus();
+        return;
+    }
+
+    if (!event.shiftKey && activeElement === last) {
+        event.preventDefault();
+        first.focus();
+    }
+}
+
+function requestConfirmation({ title = 'Confirmar acción', message = '', confirmText = 'Continuar', cancelText = 'Cancelar' } = {}) {
+    const modal = document.getElementById('confirm-modal');
+    const overlay = document.getElementById('confirm-modal-overlay');
+    const titleEl = document.getElementById('confirm-title');
+    const messageEl = document.getElementById('confirm-message');
+    const acceptBtn = document.getElementById('confirm-accept');
+    const cancelBtn = document.getElementById('confirm-cancel');
+    if (!modal || !overlay || !titleEl || !messageEl || !acceptBtn || !cancelBtn) {
+        return Promise.resolve(false);
+    }
+
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    acceptBtn.textContent = confirmText;
+    cancelBtn.textContent = cancelText;
+
+    return new Promise((resolve) => {
+        const lastFocusedElement = document.activeElement;
+
+        const close = (value) => {
+            modal.classList.add('modal-hidden');
+            modal.classList.remove('modal-visible');
+            modal.setAttribute('aria-hidden', 'true');
+            acceptBtn.removeEventListener('click', onAccept);
+            cancelBtn.removeEventListener('click', onCancel);
+            overlay.removeEventListener('click', onCancel);
+            document.removeEventListener('keydown', onKeydown);
+            if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+                lastFocusedElement.focus();
+            }
+            resolve(value);
+        };
+
+        const onAccept = () => close(true);
+        const onCancel = () => close(false);
+        const onKeydown = (event) => {
+            trapModalFocus(event, modal);
+            if (event.key === 'Escape') close(false);
+        };
+
+        acceptBtn.addEventListener('click', onAccept);
+        cancelBtn.addEventListener('click', onCancel);
+        overlay.addEventListener('click', onCancel);
+        document.addEventListener('keydown', onKeydown);
+
+        modal.classList.remove('modal-hidden');
+        modal.classList.add('modal-visible');
+        modal.setAttribute('aria-hidden', 'false');
+        cancelBtn.focus();
+    });
+}
+
+function requestManualFlightInput({ origin = 'Bogotá', destination = 'Buenos Aires', country = '' } = {}) {
+    const modal = document.getElementById('manual-flight-modal');
+    const overlay = document.getElementById('manual-flight-overlay');
+    const form = document.getElementById('manual-flight-form');
+    const originInput = document.getElementById('manual-origin');
+    const destinationInput = document.getElementById('manual-destination');
+    const countryInput = document.getElementById('manual-country');
+    const errorEl = document.getElementById('manual-flight-error');
+    const cancelBtn = document.getElementById('manual-flight-cancel');
+    if (!modal || !overlay || !form || !originInput || !destinationInput || !countryInput || !errorEl || !cancelBtn) {
+        return Promise.resolve(null);
+    }
+
+    originInput.value = origin;
+    destinationInput.value = destination;
+    countryInput.value = country;
+    errorEl.textContent = '';
+
+    return new Promise((resolve) => {
+        const lastFocusedElement = document.activeElement;
+
+        const close = (value) => {
+            modal.classList.add('modal-hidden');
+            modal.classList.remove('modal-visible');
+            modal.setAttribute('aria-hidden', 'true');
+            form.removeEventListener('submit', onSubmit);
+            cancelBtn.removeEventListener('click', onCancel);
+            overlay.removeEventListener('click', onCancel);
+            document.removeEventListener('keydown', onKeydown);
+            if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+                lastFocusedElement.focus();
+            }
+            resolve(value);
+        };
+
+        const onSubmit = (event) => {
+            event.preventDefault();
+            const manualOrigin = originInput.value.trim();
+            const manualDestination = destinationInput.value.trim();
+            const manualCountry = countryInput.value.trim();
+            if (!manualOrigin || !manualDestination) {
+                errorEl.textContent = 'Completa origen y destino.';
+                return;
+            }
+            close({ origin: manualOrigin, destination: manualDestination, country: manualCountry });
+        };
+        const onCancel = () => close(null);
+        const onKeydown = (event) => {
+            trapModalFocus(event, modal);
+            if (event.key === 'Escape') close(null);
+        };
+
+        form.addEventListener('submit', onSubmit);
+        cancelBtn.addEventListener('click', onCancel);
+        overlay.addEventListener('click', onCancel);
+        document.addEventListener('keydown', onKeydown);
+
+        modal.classList.remove('modal-hidden');
+        modal.classList.add('modal-visible');
+        modal.setAttribute('aria-hidden', 'false');
+        originInput.focus();
+        originInput.select();
+    });
 }
 
 function updateAuthUI() {
@@ -704,6 +907,8 @@ function setupAuthControls() {
         }
     });
     document.addEventListener('keydown', (event) => {
+        trapModalFocus(event, authModal);
+
         if (event.key === 'Escape' && authModal?.classList.contains('modal-visible')) {
             hideAuthModal();
         }
@@ -717,19 +922,22 @@ function setupAuthControls() {
         const email = emailInput?.value.trim() || '';
         const password = passwordInput?.value || '';
         if (!email) {
-            alert('Ingresa un email válido.');
+            showToast('Ingresa un email válido.', 'error');
+            emailInput?.focus();
             return null;
         }
 
         if (mode === 'login' && password.length < 6) {
-            alert('Ingresa tu contraseña (mínimo 6 caracteres).');
+            showToast('Ingresa tu contraseña (mínimo 6 caracteres).', 'error');
+            passwordInput?.focus();
             return null;
         }
 
         if (mode === 'register') {
             const strength = validatePasswordStrength(password);
             if (!strength.isStrong) {
-                alert('La contraseña debe tener al menos 8 caracteres e incluir mayúscula, minúscula, número y símbolo.');
+                showToast('La contraseña debe tener al menos 8 caracteres e incluir mayúscula, minúscula, número y símbolo.', 'error', 5200);
+                passwordInput?.focus();
                 return null;
             }
         }
@@ -740,29 +948,36 @@ function setupAuthControls() {
     loginBtn?.addEventListener('click', async () => {
         const creds = readCredentials('login');
         if (!creds) return;
+        setButtonBusy(loginBtn, true, 'Ingresando...');
         try {
             await signInWithEmailAndPassword(auth, creds.email, creds.password);
             hideAuthModal();
         } catch (error) {
             console.error('Error iniciando sesión:', error);
-            alert('No se pudo iniciar sesión. Verifica email y contraseña.');
+            showToast('No se pudo iniciar sesión. Verifica email y contraseña.', 'error');
+        } finally {
+            setButtonBusy(loginBtn, false);
         }
     });
 
     registerBtn?.addEventListener('click', async () => {
         const creds = readCredentials('register');
         if (!creds) return;
+        setButtonBusy(registerBtn, true, 'Creando...');
         try {
             await createUserWithEmailAndPassword(auth, creds.email, creds.password);
-            alert('Cuenta creada correctamente.');
+            showToast('Cuenta creada correctamente.', 'success');
             hideAuthModal();
         } catch (error) {
             console.error('Error creando cuenta:', error);
-            alert('No se pudo crear la cuenta. Revisa si el email ya existe.');
+            showToast('No se pudo crear la cuenta. Revisa si el email ya existe.', 'error');
+        } finally {
+            setButtonBusy(registerBtn, false);
         }
     });
 
     googleBtn?.addEventListener('click', async () => {
+        setButtonBusy(googleBtn, true, 'Conectando...');
         try {
             await signInWithPopup(auth, googleProvider);
             hideAuthModal();
@@ -773,49 +988,61 @@ function setupAuthControls() {
                 return;
             }
             console.error('Error con Google Sign-In:', error);
-            alert(message);
+            showToast(message, 'error', 5200);
+        } finally {
+            setButtonBusy(googleBtn, false);
         }
     });
 
     resetBtn?.addEventListener('click', async () => {
         const email = emailInput?.value.trim() || '';
         if (!email) {
-            alert('Escribe tu email para enviarte el enlace de recuperación.');
+            showToast('Escribe tu email para enviarte el enlace de recuperación.', 'error');
+            emailInput?.focus();
             return;
         }
 
+        setButtonBusy(resetBtn, true, 'Enviando...');
         try {
             await sendPasswordResetEmail(auth, email);
-            alert('Te enviamos un email para restablecer tu contraseña.');
+            showToast('Te enviamos un email para restablecer tu contraseña.', 'success');
         } catch (error) {
             console.error('Error enviando recovery email:', error);
-            alert('No se pudo enviar el correo de recuperación. Revisa el email ingresado.');
+            showToast('No se pudo enviar el correo de recuperación. Revisa el email ingresado.', 'error');
+        } finally {
+            setButtonBusy(resetBtn, false);
         }
     });
 
     accountResetBtn?.addEventListener('click', async () => {
         if (!currentUser?.email) {
-            alert('No hay una sesión activa para recuperar contraseña.');
+            showToast('No hay una sesión activa para recuperar contraseña.', 'error');
             return;
         }
 
+        setButtonBusy(accountResetBtn, true, 'Enviando...');
         try {
             await sendPasswordResetEmail(auth, currentUser.email);
-            alert('Te enviamos un email para restablecer tu contraseña.');
+            showToast('Te enviamos un email para restablecer tu contraseña.', 'success');
             closeAccountMenu();
         } catch (error) {
             console.error('Error enviando recovery email:', error);
-            alert('No se pudo enviar el correo de recuperación.');
+            showToast('No se pudo enviar el correo de recuperación.', 'error');
+        } finally {
+            setButtonBusy(accountResetBtn, false);
         }
     });
 
     accountLogoutBtn?.addEventListener('click', async () => {
+        setButtonBusy(accountLogoutBtn, true, 'Saliendo...');
         try {
             await signOut(auth);
             closeAccountMenu();
         } catch (error) {
             console.error('Error cerrando sesión:', error);
-            alert('No se pudo cerrar sesión.');
+            showToast('No se pudo cerrar sesión.', 'error');
+        } finally {
+            setButtonBusy(accountLogoutBtn, false);
         }
     });
 
@@ -2127,7 +2354,7 @@ function findCountryMatch(geoCountryName, countryCountsEnglish) {
 
 function startAnimationMode() {
     if (!lastFilteredFlights.length) {
-        alert('No hay vuelos para reproducir con los filtros actuales.');
+        showToast('No hay vuelos para reproducir con los filtros actuales.', 'info');
         return;
     }
 
@@ -2341,6 +2568,8 @@ function setupDatabaseManager() {
     overlay?.addEventListener('click', closeModal);
 
     document.addEventListener('keydown', (event) => {
+        trapModalFocus(event, modal);
+
         if (event.key === 'Escape' && modal.classList.contains('modal-visible')) {
             closeModal();
         }
@@ -2361,13 +2590,13 @@ function setupDatabaseManager() {
         const rating = Number(document.getElementById('db-rating').value || 5);
 
         if (!flightNumber || !date || !distance || !origin || !destination || !country) {
-            alert('Completa todos los campos para agregar un vuelo manual.');
+            showToast('Completa todos los campos para agregar un vuelo manual.', 'error');
             return;
         }
 
         const flightsRef = getFlightsCollectionRef();
         if (!flightsRef) {
-            alert('Inicia sesión para guardar vuelos.');
+            showToast('Inicia sesión para guardar vuelos.', 'error');
             return;
         }
 
@@ -2376,7 +2605,11 @@ function setupDatabaseManager() {
         const newSig = buildFlightSignature({ flightNumber, date, origin, destination, distance });
         const isDuplicate = allFlights.some(f => buildFlightSignature(f) === newSig);
         if (isDuplicate) {
-            const proceed = confirm(`⚠️ Ya existe un vuelo con el mismo número, fecha y ruta (${flightNumber} – ${origin} → ${destination} el ${date}). ¿Guardarlo de todas formas?`);
+            const proceed = await requestConfirmation({
+                title: 'Vuelo duplicado',
+                message: `Ya existe un vuelo con el mismo número, fecha y ruta (${flightNumber} - ${origin} -> ${destination} el ${date}).`,
+                confirmText: 'Guardar igual'
+            });
             if (!proceed) {
                 if (dbAddSubmit) dbAddSubmit.disabled = false;
                 return;
@@ -2403,27 +2636,32 @@ function setupDatabaseManager() {
             if (dbAddSubmit) dbAddSubmit.disabled = false;
             await loadFlights();
             renderDatabaseTable(allFlights);
+            showToast(`Vuelo ${flightNumber} agregado manualmente.`, 'success');
         } catch (error) {
             console.error('Error agregando vuelo manual:', error);
-            alert('No se pudo agregar el vuelo manualmente.');
+            showToast('No se pudo agregar el vuelo manualmente.', 'error');
             if (dbAddSubmit) dbAddSubmit.disabled = false;
         }
     });
 
     resetBtn?.addEventListener('click', async () => {
-        const shouldReset = confirm('Esto eliminará TODOS los vuelos de la base de datos. ¿Continuar?');
+        const shouldReset = await requestConfirmation({
+            title: 'Resetear base',
+            message: 'Esto eliminará todos tus vuelos guardados. Esta acción no se puede deshacer.',
+            confirmText: 'Resetear'
+        });
         if (!shouldReset) return;
 
         const flightsRef = getFlightsCollectionRef();
         if (!flightsRef) {
-            alert('Inicia sesión para resetear tu base.');
+            showToast('Inicia sesión para resetear tu base.', 'error');
             return;
         }
 
         try {
             const snapshot = await getDocs(flightsRef);
             if (snapshot.empty) {
-                alert('La base ya está vacía.');
+                showToast('La base ya está vacía.', 'info');
                 return;
             }
 
@@ -2433,10 +2671,10 @@ function setupDatabaseManager() {
 
             await loadFlights();
             renderDatabaseTable(allFlights);
-            alert('Base de datos reseteada. Ahora está vacía.');
+            showToast('Base de datos reseteada. Ahora está vacía.', 'success');
         } catch (error) {
             console.error('Error reseteando la base de datos:', error);
-            alert('No se pudo resetear la base de datos.');
+            showToast('No se pudo resetear la base de datos.', 'error');
         }
     });
 
@@ -2452,18 +2690,24 @@ function setupDatabaseManager() {
         if (!flightId || !row) return;
 
         if (action === 'delete') {
-            if (!confirm('¿Eliminar este registro?')) return;
+            const shouldDelete = await requestConfirmation({
+                title: 'Eliminar registro',
+                message: 'El vuelo seleccionado se eliminará de tu base.',
+                confirmText: 'Eliminar'
+            });
+            if (!shouldDelete) return;
             if (!currentUser) {
-                alert('Inicia sesión para eliminar registros.');
+                showToast('Inicia sesión para eliminar registros.', 'error');
                 return;
             }
             try {
                 await deleteDoc(doc(window.db, 'users', currentUser.uid, 'flights', flightId));
                 await loadFlights();
                 renderDatabaseTable(allFlights);
+                showToast('Registro eliminado.', 'success');
             } catch (error) {
                 console.error('Error eliminando vuelo:', error);
-                alert('No se pudo eliminar el registro.');
+                showToast('No se pudo eliminar el registro.', 'error');
             }
             return;
         }
@@ -2481,7 +2725,7 @@ function setupDatabaseManager() {
             };
 
             if (!payload.flightNumber || !payload.date || !payload.origin || !payload.destination || !payload.country || !payload.distance) {
-                alert('Completa los campos obligatorios antes de guardar.');
+                showToast('Completa los campos obligatorios antes de guardar.', 'error');
                 return;
             }
 
@@ -2489,15 +2733,16 @@ function setupDatabaseManager() {
 
             try {
                 if (!currentUser) {
-                    alert('Inicia sesión para actualizar registros.');
+                    showToast('Inicia sesión para actualizar registros.', 'error');
                     return;
                 }
                 await updateDoc(doc(window.db, 'users', currentUser.uid, 'flights', flightId), payload);
                 await loadFlights();
                 renderDatabaseTable(allFlights);
+                showToast('Registro actualizado.', 'success');
             } catch (error) {
                 console.error('Error actualizando vuelo:', error);
-                alert('No se pudo actualizar el registro.');
+                showToast('No se pudo actualizar el registro.', 'error');
             }
         }
     });
@@ -2597,6 +2842,7 @@ async function setupForm() {
     const dateInput = document.getElementById('date');
     const loadSampleBtn = document.getElementById('load-sample');
     const submitBtn = document.getElementById('submit-btn');
+    const lookupStatus = document.getElementById('flight-lookup-status');
     const flightInfo = document.getElementById('flight-info');
     const flightError = document.getElementById('flight-error');
     const openRegisterModalBtn = document.getElementById('open-register-modal');
@@ -2631,6 +2877,8 @@ async function setupForm() {
     closeRegisterModalBtn.addEventListener('click', closeModal);
     modalOverlay.addEventListener('click', closeModal);
     document.addEventListener('keydown', (event) => {
+        trapModalFocus(event, flightModal);
+
         if (event.key === 'Escape' && flightModal.classList.contains('modal-visible')) {
             closeModal();
         }
@@ -2648,31 +2896,34 @@ async function setupForm() {
         flightError.style.display = 'none';
     };
 
-    const buildManualFlightData = (flightNumberValue) => {
-        const originInput = prompt('No encontramos ese vuelo automaticamente. Ingresa ciudad de origen:', 'Bogotá');
-        if (originInput === null) return null;
+    const setLookupStatus = (message = '', type = 'loading') => {
+        if (!lookupStatus) return;
+        lookupStatus.textContent = message;
+        lookupStatus.classList.toggle('is-visible', Boolean(message));
+        lookupStatus.classList.toggle('is-success', type === 'success');
+        lookupStatus.classList.toggle('is-error', type === 'error');
+    };
 
-        const destinationInput = prompt('Ingresa ciudad de destino:', 'Buenos Aires');
-        if (destinationInput === null) return null;
+    const buildManualFlightData = async (flightNumberValue) => {
+        const manualInput = await requestManualFlightInput({
+            origin: 'Bogotá',
+            destination: 'Buenos Aires',
+            country: normalizeCountryName('', 'Buenos Aires')
+        });
+        if (!manualInput) return null;
 
-        const normalizedOrigin = normalizeOriginCity(originInput.trim());
-        const normalizedDestination = normalizeDestinationCity(destinationInput.trim());
+        const normalizedOrigin = normalizeOriginCity(manualInput.origin);
+        const normalizedDestination = normalizeDestinationCity(manualInput.destination);
         if (!normalizedOrigin || !normalizedDestination || normalizedDestination === 'Desconocido') {
-            alert('Origen o destino inválido. Vuelve a intentarlo.');
+            showToast('Origen o destino inválido. Vuelve a intentarlo.', 'error');
             return null;
         }
-
-        const countryInput = prompt(
-            'Ingresa pais destino (Enter para usar deteccion automatica):',
-            normalizeCountryName('', normalizedDestination)
-        );
-        if (countryInput === null) return null;
 
         return {
             origin: normalizedOrigin,
             destination: normalizedDestination,
             distance: calculateRouteDistanceKm(normalizedOrigin, normalizedDestination, 1000),
-            country: normalizeCountryName(countryInput.trim(), normalizedDestination),
+            country: normalizeCountryName(manualInput.country, normalizedDestination),
             departureIata: String(flightNumberValue || '').substring(0, 2).toUpperCase() || null,
             arrivalIata: null,
             originLat: null,
@@ -2685,19 +2936,26 @@ async function setupForm() {
     flightNumberInput.addEventListener('blur', async () => {
         const flightNumber = flightNumberInput.value.trim();
         if (flightNumber.length >= 3) {
+            setLookupStatus('Buscando datos del vuelo...');
             submitBtn.disabled = true;
             const flightData = await lookupFlightWithFallback(flightNumber);
             if (flightData) {
                 currentFlightData = flightData;
                 setFlightInfoPanel(flightData);
+                setLookupStatus('Vuelo reconocido. Revisa los datos antes de registrar.', 'success');
                 submitBtn.disabled = false;
             } else {
-                const useManualData = confirm('No pudimos reconocer el vuelo automaticamente. ¿Quieres cargarlo manualmente?');
+                const useManualData = await requestConfirmation({
+                    title: 'Vuelo no encontrado',
+                    message: 'No pudimos reconocer el vuelo automáticamente. Puedes cargar origen y destino manualmente.',
+                    confirmText: 'Cargar manualmente'
+                });
                 if (useManualData) {
-                    const manualData = buildManualFlightData(flightNumber);
+                    const manualData = await buildManualFlightData(flightNumber);
                     if (manualData) {
                         currentFlightData = manualData;
                         setFlightInfoPanel(manualData);
+                        setLookupStatus('Ruta manual lista para registrar.', 'success');
                         submitBtn.disabled = false;
                         return;
                     }
@@ -2705,10 +2963,17 @@ async function setupForm() {
 
                 flightInfo.style.display = 'none';
                 flightError.style.display = 'block';
-                flightError.textContent = '❌ Vuelo no encontrado en proveedores ni fallback local.';
+                flightError.textContent = 'Vuelo no encontrado en proveedores ni fallback local.';
+                setLookupStatus('No se pudo reconocer el vuelo.', 'error');
                 submitBtn.disabled = true;
                 currentFlightData = null;
             }
+        } else {
+            setLookupStatus('');
+            flightInfo.style.display = 'none';
+            flightError.style.display = 'none';
+            submitBtn.disabled = true;
+            currentFlightData = null;
         }
     });
 
@@ -2716,7 +2981,8 @@ async function setupForm() {
         e.preventDefault();
         
         if (!currentFlightData) {
-            alert('Por favor, ingresa un número de vuelo válido');
+            showToast('Por favor, ingresa un número de vuelo válido.', 'error');
+            flightNumberInput.focus();
             return;
         }
 
@@ -2732,18 +2998,22 @@ async function setupForm() {
 
         const flightsRef = getFlightsCollectionRef();
         if (!flightsRef) {
-            alert('Debes iniciar sesión para registrar vuelos.');
+            showToast('Debes iniciar sesión para registrar vuelos.', 'error');
             return;
         }
 
         // Prevenir doble-click y detectar duplicados antes de guardar
-        submitBtn.disabled = true;
+        setButtonBusy(submitBtn, true, 'Registrando...');
         const newSig = buildFlightSignature({ flightNumber, date, origin, destination, distance });
         const isDuplicate = allFlights.some(f => buildFlightSignature(f) === newSig);
         if (isDuplicate) {
-            const proceed = confirm(`⚠️ Ya existe un vuelo con el mismo número, fecha y ruta (${flightNumber} – ${origin} → ${destination} el ${date}). ¿Guardarlo de todas formas?`);
+            const proceed = await requestConfirmation({
+                title: 'Vuelo duplicado',
+                message: `Ya existe un vuelo con el mismo número, fecha y ruta (${flightNumber} - ${origin} -> ${destination} el ${date}).`,
+                confirmText: 'Guardar igual'
+            });
             if (!proceed) {
-                submitBtn.disabled = false;
+                setButtonBusy(submitBtn, false);
                 return;
             }
         }
@@ -2766,27 +3036,40 @@ async function setupForm() {
                 destinationLat: Number.isFinite(currentFlightData.destinationLat) ? currentFlightData.destinationLat : null,
                 destinationLng: Number.isFinite(currentFlightData.destinationLng) ? currentFlightData.destinationLng : null
             });
-            alert(`✈️ Vuelo ${flightNumber} registrado exitosamente`);
+            showToast(`Vuelo ${flightNumber} registrado exitosamente.`, 'success');
+            setButtonBusy(submitBtn, false);
             form.reset();
             flightInfo.style.display = 'none';
             flightError.style.display = 'none';
+            setLookupStatus('');
             currentFlightData = null;
             const defaultRating = document.getElementById('star5');
             if (defaultRating) defaultRating.checked = true;
+            submitBtn.disabled = true;
             loadFlights(); // Recargar datos
             closeModal();
         } catch (error) {
             console.error('Error registrando vuelo:', error);
-            alert('Error registrando vuelo');
-            submitBtn.disabled = false;
+            showToast('Error registrando vuelo.', 'error');
+            setButtonBusy(submitBtn, false);
         }
     });
 
     loadSampleBtn.addEventListener('click', async () => {
         if (!ensureAuthenticated()) return;
-        if (confirm('¿Cargar 30 vuelos de ejemplo? Esto puede tomar un momento.')) {
-            await loadSampleData();
-            loadFlights();
+        const shouldLoadSamples = await requestConfirmation({
+            title: 'Cargar ejemplos',
+            message: 'Se reemplazarán tus vuelos actuales por 30 vuelos de ejemplo.',
+            confirmText: 'Cargar ejemplos'
+        });
+        if (shouldLoadSamples) {
+            setButtonBusy(loadSampleBtn, true, 'Cargando ejemplos...');
+            try {
+                await loadSampleData();
+                loadFlights();
+            } finally {
+                setButtonBusy(loadSampleBtn, false);
+            }
         }
     });
 }
@@ -2794,7 +3077,7 @@ async function setupForm() {
 async function loadSampleData() {
     const flightsRef = getFlightsCollectionRef();
     if (!flightsRef) {
-        alert('Debes iniciar sesión para cargar datos de ejemplo.');
+        showToast('Debes iniciar sesión para cargar datos de ejemplo.', 'error');
         return;
     }
 
@@ -2876,7 +3159,11 @@ async function loadSampleData() {
             errorCount++;
         }
     }
-    alert(`✈️ Se cargaron ${successCount} vuelos de ejemplo exitosamente!\n\nAhora puedes ver:\n• Marcadores de origen por aerolínea desde diferentes ciudades\n• Marcadores de destino con colores únicos\n• Líneas punteadas conectando cada ruta\n• Popups detallados con información por aerolínea y origen`);
+    if (errorCount > 0) {
+        showToast(`Se cargaron ${successCount} vuelos de ejemplo. ${errorCount} no se pudieron guardar.`, 'error', 5200);
+    } else {
+        showToast(`Se cargaron ${successCount} vuelos de ejemplo.`, 'success');
+    }
 }
 
 async function loadFlights() {

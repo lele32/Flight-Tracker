@@ -6,6 +6,7 @@
 - Flujo de deploy: `git push` a `main` -> Vercel auto-deploy.
 - Firebase se usa para Auth/Firestore.
 - `functions/lookupFlight` en Firebase es opcional y actualmente no forma parte del flujo (en plan Spark no se puede desplegar Functions v2 con build APIs).
+- El endpoint productivo exige Firebase ID token en `Authorization: Bearer <token>` y valida firma, issuer, audience y expiración con certificados públicos de Firebase.
 
 ## 🚀 Auto-Deployment desde GitHub
 
@@ -31,9 +32,12 @@ Cada push a `main` desplegará automáticamente a producción.
 ## 🛡️ Rate Limiting
 
 ### Configuración Actual
-- **Límite**: 30 requests por minuto por IP
+- **Límite**: 30 requests por minuto
 - **Ventana**: 60 segundos (rolling window)
+- **Antes de autenticar**: límite por IP para frenar abuso anónimo
+- **Después de autenticar**: límite por combinación usuario + IP
 - **Respuesta cuando se excede**: HTTP 429 con `retryAfter` en segundos
+- **Persistencia**: en memoria serverless; se reinicia con cold starts. Para protección fuerte, migrar a Vercel KV/Upstash.
 
 ### Headers de Rate Limit
 ```
@@ -121,6 +125,20 @@ Para analytics persistente, agregar:
 
 ## 🔒 Seguridad Headers
 
+### Autenticación
+
+Todas las búsquedas reales requieren un Firebase ID token:
+
+```bash
+curl "https://flight-tracker-deploy.vercel.app/api/lookupFlight?flightNumber=AR1388" \
+  -H "Authorization: Bearer $FIREBASE_ID_TOKEN"
+```
+
+Respuestas esperadas:
+- Sin token: `401 { "error": "unauthenticated" }`
+- Token inválido o expirado: `401 { "error": "unauthenticated" }`
+- Origen CORS no permitido: `403 { "error": "origin-not-allowed" }`
+
 ### Headers Implementados
 ```
 X-Content-Type-Options: nosniff
@@ -131,8 +149,11 @@ Access-Control-Allow-Origin: [origen permitido]
 
 ### CORS Permitido
 - `https://lele32.github.io` (producción)
+- `https://flight-tracker-deploy.vercel.app` (producción Vercel)
 - `http://localhost:5500` (desarrollo)
 - `http://127.0.0.1:5500` (desarrollo)
+
+La validación de origen usa comparación exacta, no prefijos.
 
 ---
 
@@ -141,6 +162,7 @@ Access-Control-Allow-Origin: [origen permitido]
 ### Configuradas en Vercel
 ```
 AVIATIONSTACK_API_KEY=TU_API_KEY_AQUI
+FIREBASE_PROJECT_ID=flightracker-f5493
 ```
 
 ### Agregar/Editar
@@ -155,13 +177,16 @@ npx vercel env add VARIABLE_NAME production
 
 ### Test Básico
 ```bash
-curl "https://flight-tracker-deploy.vercel.app/api/lookupFlight?flightNumber=AR1388"
+FIREBASE_ID_TOKEN="pega_un_token_valido" ./test_api.sh
 ```
+
+Sin `FIREBASE_ID_TOKEN`, el script ejecuta solo las pruebas públicas/negativas y omite los casos autenticados.
 
 ### Test Rate Limiting
 ```bash
 for i in {1..35}; do
   curl -s "https://flight-tracker-deploy.vercel.app/api/lookupFlight?flightNumber=AR1388" \
+    -H "Authorization: Bearer $FIREBASE_ID_TOKEN" \
     -w "\n%{http_code}\n"
   sleep 0.1
 done
