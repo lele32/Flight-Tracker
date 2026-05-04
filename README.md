@@ -20,6 +20,7 @@ Una aplicación web simple para rastrear y visualizar información de vuelos usa
   - Busca automáticamente en la base de datos de vuelos
   - Calcula origen, destino, distancia y país automáticamente
   - Acepta formatos como `AR1246`, `AR 1246` o `AR-1246`
+  - Normaliza ciudades y países comunes: por ejemplo `San Pablo - Brasil`, `Sao Paulo` o `São Paulo Brazil` se registran como São Paulo, Brasil y bandera 🇧🇷
   - Si un proveedor no conoce el vuelo, permite cargar la ruta manualmente y aprende esa ruta para futuros registros en el mismo navegador
   - Muestra la información antes de confirmar
   - Registra el vuelo en Firestore

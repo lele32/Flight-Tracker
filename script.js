@@ -1598,6 +1598,91 @@ const countryAliasToSpanish = {
     'new zealand': 'Nueva Zelanda'
 };
 
+const countrySpanishToIso = {
+    'Estados Unidos': 'US',
+    'México': 'MX',
+    'Reino Unido': 'GB',
+    'Francia': 'FR',
+    'Alemania': 'DE',
+    'Italia': 'IT',
+    'España': 'ES',
+    'Países Bajos': 'NL',
+    'Japón': 'JP',
+    'Australia': 'AU',
+    'Chile': 'CL',
+    'Uruguay': 'UY',
+    'Argentina': 'AR',
+    'Paraguay': 'PY',
+    'Perú': 'PE',
+    'Colombia': 'CO',
+    'Venezuela': 'VE',
+    'Ecuador': 'EC',
+    'Bolivia': 'BO',
+    'Brasil': 'BR',
+    'Canadá': 'CA',
+    'Portugal': 'PT',
+    'Bélgica': 'BE',
+    'Dinamarca': 'DK',
+    'Suecia': 'SE',
+    'Noruega': 'NO',
+    'Finlandia': 'FI',
+    'Austria': 'AT',
+    'Suiza': 'CH',
+    'República Checa': 'CZ',
+    'Hungría': 'HU',
+    'Polonia': 'PL',
+    'Turquía': 'TR',
+    'Grecia': 'GR',
+    'Emiratos Árabes': 'AE',
+    'Catar': 'QA',
+    'Arabia Saudita': 'SA',
+    'Israel': 'IL',
+    'Kenia': 'KE',
+    'Sudáfrica': 'ZA',
+    'Egipto': 'EG',
+    'Marruecos': 'MA',
+    'Corea del Sur': 'KR',
+    'China': 'CN',
+    'Singapur': 'SG',
+    'Tailandia': 'TH',
+    'Malasia': 'MY',
+    'Indonesia': 'ID',
+    'Filipinas': 'PH',
+    'India': 'IN',
+    'Nueva Zelanda': 'NZ'
+};
+
+const cityAliasToCanonical = {
+    'san pablo': 'São Paulo',
+    'sao paulo': 'São Paulo',
+    'sao paulo brasil': 'São Paulo',
+    'sao paulo brazil': 'São Paulo',
+    'san pablo brasil': 'São Paulo',
+    'san pablo brazil': 'São Paulo',
+    'sp brasil': 'São Paulo',
+    'sp brazil': 'São Paulo',
+    'rio': 'Río de Janeiro',
+    'rio de janeiro': 'Río de Janeiro',
+    'rio de janeiro brasil': 'Río de Janeiro',
+    'bs as': 'Buenos Aires',
+    'buenos aires argentina': 'Buenos Aires',
+    'santiago chile': 'Santiago',
+    'santiago de chile': 'Santiago de Chile',
+    'mexico df': 'Ciudad de México',
+    'cdmx': 'Ciudad de México',
+    'ciudad de mexico': 'Ciudad de México',
+    'new york': 'Nueva York',
+    'nyc': 'Nueva York',
+    'los angeles': 'Los Ángeles',
+    'paris': 'París',
+    'berlin': 'Berlín',
+    'munich': 'Múnich',
+    'milan': 'Milán',
+    'amsterdam': 'Ámsterdam',
+    'tokyo': 'Tokio',
+    'sydney': 'Sídney'
+};
+
 const airportKeywordToCity = {
     // Argentina
     'aeroparque': 'Buenos Aires', 'jorge newbery': 'Buenos Aires',
@@ -1727,9 +1812,53 @@ function normalizeText(value) {
         .toLowerCase();
 }
 
+function getCountryAlias(value) {
+    return countryAliasToSpanish[normalizeText(value)] || null;
+}
+
+function parseLocationInput(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return { city: '', country: '' };
+
+    const separators = /\s*(?:,|\/|\||\s+-\s+|\s+–\s+|\s+—\s+)\s*/;
+    const parts = raw.split(separators).map((part) => part.trim()).filter(Boolean);
+    if (parts.length >= 2) {
+        const possibleCountry = getCountryAlias(parts[parts.length - 1]);
+        if (possibleCountry) {
+            return {
+                city: parts.slice(0, -1).join(' '),
+                country: possibleCountry
+            };
+        }
+    }
+
+    const normalized = normalizeText(raw);
+    for (const [alias, country] of Object.entries(countryAliasToSpanish)) {
+        const suffix = ` ${alias}`;
+        if (normalized.endsWith(suffix)) {
+            return {
+                city: raw.slice(0, Math.max(0, raw.length - suffix.length)).trim(),
+                country
+            };
+        }
+    }
+
+    return { city: raw, country: '' };
+}
+
+function getCityAlias(value) {
+    const normalized = normalizeText(value);
+    return cityAliasToCanonical[normalized] || null;
+}
+
 function normalizeDestinationCity(destination) {
-    const raw = String(destination || '').trim();
+    const location = parseLocationInput(destination);
+    const raw = String(location.city || destination || '').trim();
     if (!raw) return 'Desconocido';
+
+    const aliasCity = getCityAlias(raw);
+    if (aliasCity) return aliasCity;
+
     if (cityToCountryMap[raw]) return raw;
 
     const normalized = normalizeText(raw);
@@ -1748,6 +1877,8 @@ function normalizeDestinationCity(destination) {
         .trim();
 
     if (cityToCountryMap[cleaned]) return cleaned;
+    const cleanedAliasCity = getCityAlias(cleaned);
+    if (cleanedAliasCity) return cleanedAliasCity;
     return raw;
 }
 
@@ -1758,15 +1889,17 @@ function normalizeOriginCity(origin) {
 
 function normalizeCountryName(country, destination = '') {
     const rawCountry = String(country || '').trim();
+    const parsedDestination = parseLocationInput(destination);
     const destinationCity = normalizeDestinationCity(destination);
 
     if (rawCountry) {
         if (cityToCountryMap[rawCountry]) return cityToCountryMap[rawCountry];
-        const alias = countryAliasToSpanish[normalizeText(rawCountry)];
+        const alias = getCountryAlias(rawCountry);
         if (alias) return alias;
         return rawCountry;
     }
 
+    if (parsedDestination.country) return parsedDestination.country;
     return cityToCountryMap[destinationCity] || 'Desconocido';
 }
 
@@ -2731,14 +2864,19 @@ function setupDatabaseManager() {
         const flightNumber = normalizeFlightNumberInput(document.getElementById('db-flight-number').value);
         const date = document.getElementById('db-date').value;
         const distance = Number(document.getElementById('db-distance').value);
-        const origin = document.getElementById('db-origin').value.trim();
-        const destination = document.getElementById('db-destination').value.trim();
-        const country = document.getElementById('db-country').value.trim();
+        const origin = normalizeOriginCity(document.getElementById('db-origin').value);
+        const destination = normalizeDestinationCity(document.getElementById('db-destination').value);
+        const country = normalizeCountryName(document.getElementById('db-country').value, destination);
         const category = document.getElementById('db-category').value;
         const rating = Number(document.getElementById('db-rating').value || 5);
 
-        if (!flightNumber || !date || !distance || !origin || !destination || !country) {
-            showToast('Completa todos los campos para agregar un vuelo manual.', 'error');
+        if (!flightNumber || !date || !distance || !origin || !destination || destination === 'Desconocido') {
+            showToast('Completa vuelo, fecha, distancia, origen y destino.', 'error');
+            return;
+        }
+
+        if (!country || country === 'Desconocido') {
+            showToast('No pude detectar el país. Escríbelo manualmente.', 'error');
             return;
         }
 
@@ -2871,16 +3009,22 @@ function setupDatabaseManager() {
             const payload = {
                 flightNumber: normalizeFlightNumberInput(row.querySelector('[data-field="flightNumber"]').value),
                 date: row.querySelector('[data-field="date"]').value,
-                origin: row.querySelector('[data-field="origin"]').value.trim(),
-                destination: row.querySelector('[data-field="destination"]').value.trim(),
-                country: row.querySelector('[data-field="country"]').value.trim(),
+                origin: normalizeOriginCity(row.querySelector('[data-field="origin"]').value),
+                destination: normalizeDestinationCity(row.querySelector('[data-field="destination"]').value),
+                country: '',
                 distance: Number(row.querySelector('[data-field="distance"]').value),
                 category: row.querySelector('[data-field="category"]').value,
                 rating: Number(row.querySelector('[data-field="rating"]').value || 5)
             };
+            payload.country = normalizeCountryName(row.querySelector('[data-field="country"]').value, payload.destination);
 
-            if (!payload.flightNumber || !payload.date || !payload.origin || !payload.destination || !payload.country || !payload.distance) {
+            if (!payload.flightNumber || !payload.date || !payload.origin || !payload.destination || payload.destination === 'Desconocido' || !payload.distance) {
                 showToast('Completa los campos obligatorios antes de guardar.', 'error');
+                return;
+            }
+
+            if (!payload.country || payload.country === 'Desconocido') {
+                showToast('No pude detectar el país. Escríbelo manualmente.', 'error');
                 return;
             }
 
@@ -3908,26 +4052,14 @@ function renderMap(flights, highlightedFlight = null) {
 }
 
 function getCountryFlag(country) {
-    const countryFlags = {
-        'Estados Unidos': '🇺🇸',
-        'México': '🇲🇽',
-        'Reino Unido': '🇬🇧',
-        'Francia': '🇫🇷',
-        'Alemania': '🇩🇪',
-        'Italia': '🇮🇹',
-        'España': '🇪🇸',
-        'Países Bajos': '🇳🇱',
-        'Japón': '🇯🇵',
-        'Australia': '🇦🇺',
-        'Chile': '🇨🇱',
-        'Colombia': '🇨🇴',
-        'Uruguay': '🇺🇾',
-        'Argentina': '🇦🇷',
-        'Paraguay': '🇵🇾'
-    };
-
     const normalizedCountry = normalizeCountryName(country);
-    return countryFlags[normalizedCountry] || '🏳️';
+    const isoCode = countrySpanishToIso[normalizedCountry] || getCountryAlias(normalizedCountry);
+    const flagCode = countrySpanishToIso[isoCode] || isoCode;
+    if (!/^[A-Z]{2}$/.test(flagCode || '')) return '🏳️';
+
+    return Array.from(flagCode)
+        .map((letter) => String.fromCodePoint(127397 + letter.charCodeAt(0)))
+        .join('');
 }
 
 function getCategoryBadge(category) {
