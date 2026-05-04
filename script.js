@@ -60,6 +60,7 @@ let openAuthModal = () => {};
 const FLIGHT_LOOKUP_PROXY_URL_STORAGE = 'flightTracker_lookup_proxy_url';
 const FLIGHT_LOOKUP_PROXY_URL_DEFAULT = 'https://flight-tracker-deploy.vercel.app/api/lookupFlight';
 const FLIGHTS_CACHE_KEY = 'flightTracker_cached_flights_v1';
+const CUSTOM_FLIGHT_ROUTES_KEY = 'flightTracker_custom_routes_v1';
 let isLiveLookupAvailable = true;
 
 const cityCoordinates = {
@@ -498,7 +499,7 @@ async function lookupFlightLive(flightNumber) {
     const proxyUrl = getFlightLookupProxyUrl();
     if (!proxyUrl) return null;
 
-    const value = String(flightNumber || '').trim().toUpperCase();
+    const value = normalizeFlightNumberInput(flightNumber);
     if (!value) return null;
 
     try {
@@ -532,10 +533,10 @@ async function lookupFlightLive(flightNumber) {
             country,
             departureIata: String(payload.departureIata || '').toUpperCase() || null,
             arrivalIata: String(payload.arrivalIata || '').toUpperCase() || null,
-            originLat: Number(payload.originLat),
-            originLng: Number(payload.originLng),
-            destinationLat: Number(payload.destinationLat),
-            destinationLng: Number(payload.destinationLng)
+            originLat: optionalNumber(payload.originLat),
+            originLng: optionalNumber(payload.originLng),
+            destinationLat: optionalNumber(payload.destinationLat),
+            destinationLng: optionalNumber(payload.destinationLng)
         };
     } catch {
         isLiveLookupAvailable = false;
@@ -543,31 +544,105 @@ async function lookupFlightLive(flightNumber) {
     }
 }
 
+function normalizeFlightNumberInput(value) {
+    return String(value || '').trim().toUpperCase().replace(/[\s-]+/g, '');
+}
+
+function optionalNumber(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+}
+
+function getCustomFlightRoutes() {
+    try {
+        const raw = localStorage.getItem(CUSTOM_FLIGHT_ROUTES_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+        return {};
+    }
+}
+
+function getCustomFlightRoute(flightNumber) {
+    const key = normalizeFlightNumberInput(flightNumber);
+    if (!key) return null;
+    return getCustomFlightRoutes()[key] || null;
+}
+
+function saveCustomFlightRoute(flightNumber, flightData) {
+    const key = normalizeFlightNumberInput(flightNumber);
+    if (!key || !flightData?.origin || !flightData?.destination) return;
+
+    try {
+        const routes = getCustomFlightRoutes();
+        routes[key] = {
+            origin: normalizeOriginCity(flightData.origin),
+            destination: normalizeDestinationCity(flightData.destination),
+            distance: Math.max(100, Number(flightData.distance || 1000)),
+            country: normalizeCountryName(flightData.country, flightData.destination),
+            departureIata: String(flightData.departureIata || '').toUpperCase() || null,
+            arrivalIata: String(flightData.arrivalIata || '').toUpperCase() || null,
+            originLat: optionalNumber(flightData.originLat),
+            originLng: optionalNumber(flightData.originLng),
+            destinationLat: optionalNumber(flightData.destinationLat),
+            destinationLng: optionalNumber(flightData.destinationLng),
+            updatedAt: new Date().toISOString()
+        };
+        localStorage.setItem(CUSTOM_FLIGHT_ROUTES_KEY, JSON.stringify(routes));
+    } catch {
+        // La memoria local es una mejora de conveniencia; si falla, el registro principal sigue funcionando.
+    }
+}
+
+function buildFlightLookupData(routeData) {
+    if (!routeData) return null;
+    const destination = normalizeDestinationCity(routeData.destination || 'Desconocido');
+    const origin = normalizeOriginCity(routeData.origin || 'Buenos Aires');
+    const country = normalizeCountryName(routeData.country, destination);
+
+    return {
+        origin,
+        destination,
+        distance: calculateRouteDistanceKm(origin, destination, Number(routeData.distance || 1000)),
+        country,
+        departureIata: String(routeData.departureIata || '').toUpperCase() || null,
+        arrivalIata: String(routeData.arrivalIata || '').toUpperCase() || null,
+        originLat: optionalNumber(routeData.originLat),
+        originLng: optionalNumber(routeData.originLng),
+        destinationLat: optionalNumber(routeData.destinationLat),
+        destinationLng: optionalNumber(routeData.destinationLng)
+    };
+}
+
+function lookupSavedFlightRoute(flightNumber) {
+    const key = normalizeFlightNumberInput(flightNumber);
+    if (!key) return null;
+
+    const savedFlight = [...allFlights]
+        .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
+        .find((flight) => normalizeFlightNumberInput(flight.flightNumber) === key && flight.origin && flight.destination);
+
+    return buildFlightLookupData(savedFlight);
+}
+
 async function lookupFlightWithFallback(flightNumber) {
-    const value = String(flightNumber || '').trim().toUpperCase();
+    const value = normalizeFlightNumberInput(flightNumber);
     if (!value) return null;
 
     const liveResult = await lookupFlightLive(value);
     if (liveResult) return liveResult;
 
+    const savedResult = lookupSavedFlightRoute(value);
+    if (savedResult) return savedResult;
+
+    const customResult = buildFlightLookupData(getCustomFlightRoute(value));
+    if (customResult) return customResult;
+
     const localResult = lookupFlight(value);
     if (!localResult) return null;
 
-    const destination = normalizeDestinationCity(localResult.destination || 'Desconocido');
-    const country = normalizeCountryName(localResult.country, destination);
-
-    return {
-        origin: normalizeOriginCity(localResult.origin || 'Buenos Aires'),
-        destination,
-        distance: calculateRouteDistanceKm(localResult.origin || 'Buenos Aires', destination, localResult.distance),
-        country,
-        departureIata: null,
-        arrivalIata: null,
-        originLat: null,
-        originLng: null,
-        destinationLat: null,
-        destinationLng: null
-    };
+    return buildFlightLookupData(localResult);
 }
 
 function buildFlightSignature(flight) {
@@ -2653,7 +2728,7 @@ function setupDatabaseManager() {
     addForm?.addEventListener('submit', async (event) => {
         event.preventDefault();
 
-        const flightNumber = document.getElementById('db-flight-number').value.trim().toUpperCase();
+        const flightNumber = normalizeFlightNumberInput(document.getElementById('db-flight-number').value);
         const date = document.getElementById('db-date').value;
         const distance = Number(document.getElementById('db-distance').value);
         const origin = document.getElementById('db-origin').value.trim();
@@ -2701,6 +2776,7 @@ function setupDatabaseManager() {
                 rating,
                 durationHours: estimateDurationHours(distance)
             });
+            saveCustomFlightRoute(flightNumber, { origin, destination, distance, country });
 
             addForm.reset();
             document.getElementById('db-origin').value = 'Buenos Aires';
@@ -2793,7 +2869,7 @@ function setupDatabaseManager() {
 
         if (action === 'save') {
             const payload = {
-                flightNumber: row.querySelector('[data-field="flightNumber"]').value.trim().toUpperCase(),
+                flightNumber: normalizeFlightNumberInput(row.querySelector('[data-field="flightNumber"]').value),
                 date: row.querySelector('[data-field="date"]').value,
                 origin: row.querySelector('[data-field="origin"]').value.trim(),
                 destination: row.querySelector('[data-field="destination"]').value.trim(),
@@ -2817,6 +2893,7 @@ function setupDatabaseManager() {
                 }
                 setDatabaseRowBusy(row, button, true, 'Guardando...');
                 await updateDoc(doc(window.db, 'users', currentUser.uid, 'flights', flightId), payload);
+                saveCustomFlightRoute(payload.flightNumber, payload);
                 await loadFlights();
                 renderDatabaseTable(allFlights);
                 showToast('Registro actualizado.', 'success');
@@ -3004,10 +3081,12 @@ async function setupForm() {
     };
 
     const buildManualFlightData = async (flightNumberValue) => {
+        const normalizedFlightNumber = normalizeFlightNumberInput(flightNumberValue);
+        const airlineCode = normalizedFlightNumber.match(/^[A-Z]{2,3}/)?.[0] || '';
         const manualInput = await requestManualFlightInput({
-            origin: 'Bogotá',
-            destination: 'Buenos Aires',
-            country: normalizeCountryName('', 'Buenos Aires')
+            origin: 'Buenos Aires',
+            destination: '',
+            country: ''
         });
         if (!manualInput) return null;
 
@@ -3023,7 +3102,7 @@ async function setupForm() {
             destination: normalizedDestination,
             distance: calculateRouteDistanceKm(normalizedOrigin, normalizedDestination, 1000),
             country: normalizeCountryName(manualInput.country, normalizedDestination),
-            departureIata: String(flightNumberValue || '').substring(0, 2).toUpperCase() || null,
+            departureIata: airlineCode || null,
             arrivalIata: null,
             originLat: null,
             originLng: null,
@@ -3033,7 +3112,10 @@ async function setupForm() {
     };
 
     flightNumberInput.addEventListener('blur', async () => {
-        const flightNumber = flightNumberInput.value.trim();
+        const flightNumber = normalizeFlightNumberInput(flightNumberInput.value);
+        if (flightNumberInput.value && flightNumberInput.value.trim().toUpperCase() !== flightNumber) {
+            flightNumberInput.value = flightNumber;
+        }
         if (flightNumber.length >= 3) {
             setLookupStatus('Buscando datos del vuelo...');
             submitBtn.disabled = true;
@@ -3085,7 +3167,8 @@ async function setupForm() {
             return;
         }
 
-        const flightNumber = flightNumberInput.value.trim();
+        const flightNumber = normalizeFlightNumberInput(flightNumberInput.value);
+        flightNumberInput.value = flightNumber;
         const date = dateInput.value;
         const category = categoryInput.value;
         const rating = Number(document.querySelector('input[name="rating"]:checked')?.value || 5);
@@ -3135,6 +3218,8 @@ async function setupForm() {
                 destinationLat: Number.isFinite(currentFlightData.destinationLat) ? currentFlightData.destinationLat : null,
                 destinationLng: Number.isFinite(currentFlightData.destinationLng) ? currentFlightData.destinationLng : null
             });
+
+            saveCustomFlightRoute(flightNumber, currentFlightData);
             showToast(`Vuelo ${flightNumber} registrado exitosamente.`, 'success');
             setButtonBusy(submitBtn, false);
             form.reset();

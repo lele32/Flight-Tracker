@@ -314,17 +314,18 @@ module.exports = async (req, res) => {
         return;
     }
 
-    const flightNumberRaw = String(req.query.flightNumber || '').trim().toUpperCase();
+    const flightNumberInput = String(req.query.flightNumber || '').trim().toUpperCase();
+    const flightNumberRaw = flightNumberInput.replace(/[\s-]+/g, '');
     
     if (!flightNumberRaw || flightNumberRaw.length < 2 || flightNumberRaw.length > 10) {
-        log('warn', 'Invalid flight number length', { flightNumber: flightNumberRaw, ip: clientIP, uid: user.uid });
+        log('warn', 'Invalid flight number length', { flightNumber: flightNumberInput, normalizedFlightNumber: flightNumberRaw, ip: clientIP, uid: user.uid });
         requestStats.errors++;
         res.status(400).json({ error: 'invalid-flight-number-length' });
         return;
     }
     
-    if (!/^[A-Z0-9-]+$/.test(flightNumberRaw)) {
-        log('warn', 'Invalid flight number format', { flightNumber: flightNumberRaw, ip: clientIP, uid: user.uid });
+    if (!/^[A-Z]{2,3}\d{1,4}$/.test(flightNumberRaw)) {
+        log('warn', 'Invalid flight number format', { flightNumber: flightNumberInput, normalizedFlightNumber: flightNumberRaw, ip: clientIP, uid: user.uid });
         requestStats.errors++;
         res.status(400).json({ error: 'invalid-flight-number-format' });
         return;
@@ -333,8 +334,7 @@ module.exports = async (req, res) => {
     try {
         log('info', 'Looking up flight', { flightNumber: flightNumberRaw, ip: clientIP, uid: user.uid });
         
-        const compact = flightNumberRaw.replace(/\s+/g, '').replace(/-/g, '');
-        const match = compact.match(/^([A-Z]{2,3})(\d{1,4})$/);
+        const match = flightNumberRaw.match(/^([A-Z]{2,3})(\d{1,4})$/);
         const queryUrls = [
             `https://api.aviationstack.com/v1/flights?access_key=${encodeURIComponent(API_KEY)}&flight_iata=${encodeURIComponent(flightNumberRaw)}&limit=10`
         ];

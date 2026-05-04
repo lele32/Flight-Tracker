@@ -19,6 +19,8 @@ Una aplicación web simple para rastrear y visualizar información de vuelos usa
 - **Registro de Vuelos Inteligente**: Ingresa número de vuelo (ej: AM190) y fecha. El sistema:
   - Busca automáticamente en la base de datos de vuelos
   - Calcula origen, destino, distancia y país automáticamente
+  - Acepta formatos como `AR1246`, `AR 1246` o `AR-1246`
+  - Si un proveedor no conoce el vuelo, permite cargar la ruta manualmente y aprende esa ruta para futuros registros en el mismo navegador
   - Muestra la información antes de confirmar
   - Registra el vuelo en Firestore
 - **Carga de Datos de Ejemplo**: Botón para cargar 30 vuelos de ejemplo automáticamente con números de vuelo reales de 10 aerolíneas diferentes, mostrando toda la funcionalidad del mapa.
