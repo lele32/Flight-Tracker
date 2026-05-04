@@ -1668,9 +1668,12 @@ const cityAliasToCanonical = {
     'buenos aires argentina': 'Buenos Aires',
     'santiago chile': 'Santiago',
     'santiago de chile': 'Santiago de Chile',
+    'mexico': 'Ciudad de México',
     'mexico df': 'Ciudad de México',
     'cdmx': 'Ciudad de México',
     'ciudad de mexico': 'Ciudad de México',
+    'mexico city': 'Ciudad de México',
+    'mexico city mexico': 'Ciudad de México',
     'new york': 'Nueva York',
     'nyc': 'Nueva York',
     'los angeles': 'Los Ángeles',
@@ -1819,6 +1822,10 @@ function getCountryAlias(value) {
 function parseLocationInput(value) {
     const raw = String(value || '').trim();
     if (!raw) return { city: '', country: '' };
+
+    if (cityToCountryMap[raw] || cityAliasToCanonical[normalizeText(raw)]) {
+        return { city: raw, country: '' };
+    }
 
     const separators = /\s*(?:,|\/|\||\s+-\s+|\s+–\s+|\s+—\s+)\s*/;
     const parts = raw.split(separators).map((part) => part.trim()).filter(Boolean);
